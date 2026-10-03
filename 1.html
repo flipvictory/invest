@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>내 주식·자산 대시보드</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Phosphor Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    * {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #f2f4f6;
+    }
+    .color-up {
+      color: #f04452;
+    }
+    .color-down {
+      color: #3182f6;
+    }
+    .bg-up-light {
+      background-color: #fef0f1;
+    }
+    .bg-down-light {
+      background-color: #f0f6ff;
+    }
+    @keyframes flash-up {
+      0% { background-color: rgba(240, 68, 82, 0.22); }
+      100% { background-color: transparent; }
+    }
+    @keyframes flash-down {
+      0% { background-color: rgba(49, 130, 246, 0.22); }
+      100% { background-color: transparent; }
+    }
+    .tick-up {
+      animation: flash-up 0.8s ease-out;
+    }
+    .tick-down {
+      animation: flash-down 0.8s ease-out;
+    }
+    #chartCustomTooltip {
+      pointer-events: none;
+      position: absolute;
+      transition: all 0.12s ease-out;
+      transform: translate(-50%, -125%);
+      z-index: 40;
+    }
+    #chartCustomTooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #191f28 transparent transparent transparent;
+    }
+  </style>
+</head>
+<body class="flex justify-center min-h-screen text-[#191f28]">
+
+  <div class="w-full max-w-[480px] min-h-screen bg-[#f4f6f8] pb-24 flex flex-col relative shadow-md">
+
+    <!-- 상단 고정 헤더 -->
+    <header class="sticky top-0 z-30 bg-[#f4f6f8]/95 backdrop-blur-md px-5 pt-4 pb-3 flex items-center justify-between border-b border-gray-200/50">
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-bold tracking-tight text-[#191f28]">내 주식·자산</h1>
+        <span id="wsStatusDot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" title="실시간 웹소켓 정상"></span>
+      </div>
+      
+      <div class="flex items-center gap-1.5">
+        <!-- 통화 전환 토글 버튼 (USD / KRW) -->
+        <button onclick="toggleCurrency()" class="flex items-center gap-1 bg-white border border-gray-200 px-2.5 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow-xs hover:bg-gray-50 active:scale-95 transition">
+          <i class="ph ph-currency-dollar text-sm text-blue-600"></i>
+          <span id="currencyToggleLabel">USD로 보기</span>
+        </button>
+
+        <!-- Finnhub API Key 설정 버튼 -->
+        <button onclick="openApiKeyModal()" class="w-8 h-8 rounded-full bg-white text-gray-600 border border-gray-200 flex items-center justify-center text-sm hover:bg-gray-100 active:scale-95 transition shadow-xs" title="Finnhub API 설정">
+          <i class="ph ph-key"></i>
+        </button>
+
+        <!-- 백업 / 복원 메뉴 열기 -->
+        <button onclick="openBackupModal()" class="w-8 h-8 rounded-full bg-white text-gray-600 border border-gray-200 flex items-center justify-center text-base hover:bg-gray-100 active:scale-95 transition shadow-xs" title="데이터 백업 및 복원">
+          <i class="ph ph-floppy-disk"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- 기준 시점(과거 시점 시뮬레이션) 설정 바 -->
+    <div class="bg-gray-100/90 px-5 py-2 flex items-center justify-between text-xs border-b border-gray-200">
+      <div class="flex items-center gap-1.5 text-gray-700 font-semibold">
+        <i class="ph ph-calendar text-sm text-blue-600"></i>
+        <span>기준 시점:</span>
+        <input type="date" id="asOfDateInput" onchange="handleAsOfDateChange(this.value)" class="bg-white border border-gray-300 rounded-lg px-2 py-0.5 text-xs text-gray-800 font-bold outline-none focus:border-blue-500">
+      </div>
+      <button onclick="resetAsOfDate()" id="asOfResetBtn" class="hidden text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition">
+        오늘로 복귀
+      </button>
+    </div>
+
+    <!-- 실시간 상태 및 환율 바 -->
+    <div class="bg-white/90 px-5 py-2 flex items-center justify-between text-xs text-gray-600 border-b border-gray-100">
+      <div class="flex items-center gap-1.5">
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span>
+          실제 데이터 연동
+        </span>
+        <span id="marketStatusText" class="text-[11px] text-gray-500 font-medium">Finnhub 시세 수신 중</span>
+      </div>
+      <button onclick="promptExchangeRate()" class="flex items-center gap-1 hover:text-blue-600 font-semibold text-gray-600 transition">
+        <span>적용 환율:</span>
+        <span id="rateLabel" class="text-[#191f28] font-bold">1,347원</span>
+        <i class="ph ph-pencil-simple text-[11px]"></i>
+      </button>
+    </div>
+
+    <!-- 네비게이션 탭 -->
+    <div class="px-5 pt-3">
+      <div class="flex bg-gray-200/80 p-1 rounded-2xl text-xs font-bold text-gray-500">
+        <button id="navTabDashboard" class="flex-1 py-2 rounded-xl bg-white text-gray-900 shadow-xs transition" onclick="switchNavTab('dashboard')">
+          대시보드
+        </button>
+        <button id="navTabAnalysis" class="flex-1 py-2 rounded-xl hover:text-gray-900 transition" onclick="switchNavTab('analysis')">
+          비중·판매수익
+        </button>
+        <button id="navTabHistory" class="flex-1 py-2 rounded-xl hover:text-gray-900 transition" onclick="switchNavTab('history')">
+          거래·입출금 내역
+        </button>
+      </div>
+    </div>
+
+    <!-- [섹션 1] 대시보드 뷰 -->
+    <main id="viewDashboard" class="px-4 space-y-4 flex-1 mt-3">
+
+      <!-- 1-1. 내 총 자산 요약 카드 (항상 수수료 포함 상태로 계산) -->
+      <section class="bg-white rounded-3xl p-6 shadow-xs border border-gray-100 relative">
+        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
+          <div class="flex items-center gap-1.5">
+            <span>내 총 자산</span>
+          </div>
+          <button onclick="refreshActualQuotes()" class="text-gray-400 hover:text-gray-700 transition active:rotate-180 duration-500" title="실제 종가 즉시 동기화">
+            <i class="ph ph-arrows-clockwise text-lg"></i>
+          </button>
+        </div>
+
+        <div class="mt-2.5">
+          <h2 id="totalAssetDisplay" class="text-[32px] font-extrabold tracking-tight text-[#191f28]">
+            0원
+          </h2>
+          <div class="flex items-center gap-2 mt-1.5">
+            <span class="text-xs text-gray-400 font-medium">평가손익</span>
+            <span id="totalProfitAmountDisplay" class="text-base font-extrabold color-up">+0원</span>
+            <span id="totalProfitRateBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-up-light color-up">+0.00%</span>
+          </div>
+        </div>
+
+        <!-- 달러 예수금 (주식 매매 시 자동 차감/가산) -->
+        <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">$</span>
+            <span class="text-gray-500 font-medium">달러 예수금</span>
+            <strong id="usdCashDisplay" class="text-gray-900 font-bold text-sm">$0.00</strong>
+            <span id="usdCashKrwSub" class="text-[11px] text-gray-400 font-normal">(0원)</span>
+          </div>
+          <button onclick="openCashModal('DEPOSIT')" class="text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full font-bold hover:bg-blue-100 active:scale-95 transition">
+            입출금 관리
+          </button>
+        </div>
+      </section>
+
+      <!-- 1-2. 일별 자산 추이 인터랙티브 차트 카드 -->
+      <section class="bg-white rounded-3xl p-5 shadow-xs border border-gray-100 relative">
+        <div class="flex bg-gray-100/90 p-1 rounded-2xl mb-3 text-xs font-bold text-gray-500">
+          <button class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition" onclick="selectPeriod('1M', this)">1개월</button>
+          <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="selectPeriod('3M', this)">3개월</button>
+          <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="selectPeriod('6M', this)">6개월</button>
+          <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="selectPeriod('ALL', this)">전체</button>
+        </div>
+
+        <div class="h-48 w-full relative mt-2">
+          <div id="chartCustomTooltip" class="hidden bg-[#191f28] text-white px-3.5 py-2 rounded-2xl shadow-xl border border-gray-700 min-w-[110px] text-center">
+            <p id="tooltipDate" class="text-[11px] text-gray-300 font-medium">-</p>
+            <p id="tooltipValue" class="text-sm font-extrabold text-white mt-0.5 tracking-tight">0원</p>
+          </div>
+          <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-50">
+          <span id="chartStartDateLabel">-</span>
+          <div class="flex items-center gap-1.5 text-blue-600 font-semibold">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+            <span id="chartLegendCaption">합산 자산 추이 (원화 환산)</span>
+          </div>
+          <span id="chartEndDateLabel">오늘</span>
+        </div>
+      </section>
+
+      <!-- 1-3. 보유 주식 헤더 & 정렬 바 -->
+      <div class="flex items-center justify-between pt-1 px-1">
+        <div class="flex items-center gap-2">
+          <h3 class="font-bold text-lg text-gray-900">보유 주식</h3>
+          <span id="holdingStockCountBadge" class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+          <!-- 수수료 ON/OFF 토글 버튼 -->
+          <button id="feeToggleBtn" onclick="toggleFeeMode()" class="flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition" title="보유 주식 평가 시 예상 매도수수료 차감 여부 토글">
+            <i class="ph ph-receipt text-xs"></i>
+            <span id="feeToggleLabel">수수료</span>
+          </button>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <select id="sortSelect" onchange="handleSortChange(this.value)" class="text-xs bg-white border border-gray-200 text-gray-700 font-semibold rounded-full px-2.5 py-1 outline-none shadow-xs">
+            <option value="val_desc">평가금액 높은순</option>
+            <option value="val_asc">평가금액 낮은순</option>
+            <option value="rate_desc">수익률 높은순</option>
+            <option value="rate_asc">수익률 낮은순</option>
+          </select>
+
+          <button onclick="openTradeModal('BUY')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition flex items-center gap-1 active:scale-95">
+            <i class="ph ph-plus-bold"></i> 거래 등록
+          </button>
+        </div>
+      </div>
+
+      <div id="holdingStockList" class="space-y-3 pb-6"></div>
+    </main>
+
+    <!-- [섹션 2] 포트폴리오 비중 & 토스 스타일 판매수익 뷰 -->
+    <section id="viewAnalysis" class="px-4 space-y-4 flex-1 mt-3 hidden">
+
+      <!-- 2-1. 토스 인터랙티브 판매수익 카드 (항상 수수료 포함 상태로 고정 계산) -->
+      <div class="bg-white rounded-3xl p-6 shadow-xs border border-gray-100 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base text-gray-900">판매수익 (실현손익)</h3>
+            <p class="text-xs text-gray-400 mt-0.5">매도 완료된 주식의 실현 순이익입니다.</p>
+          </div>
+        </div>
+
+        <!-- 기간 단위 선택 세그먼트 (일 / 월 / 연 / 전체) -->
+        <div class="flex bg-gray-100/90 p-1 rounded-2xl text-xs font-bold text-gray-500">
+          <button id="saleModeDay" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="changeSaleProfitMode('DAY')">일</button>
+          <button id="saleModeMonth" class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition" onclick="changeSaleProfitMode('MONTH')">월</button>
+          <button id="saleModeYear" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="changeSaleProfitMode('YEAR')">연</button>
+          <button id="saleModeAll" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="changeSaleProfitMode('ALL')">전체</button>
+        </div>
+
+        <!-- 좌우 이동 내비게이션 컨트롤러 -->
+        <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100">
+          <button id="btnSalePrev" onclick="navigateSalePeriod(-1)" class="w-8 h-8 rounded-full bg-white text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-xs active:scale-90 transition">
+            <i class="ph ph-caret-left-bold text-base"></i>
+          </button>
+          
+          <div class="text-center">
+            <span id="salePeriodTitle" class="font-extrabold text-sm text-gray-900">-</span>
+            <span id="salePeriodSub" class="block text-[10px] text-gray-400 font-medium">선택된 기간</span>
+          </div>
+
+          <button id="btnSaleNext" onclick="navigateSalePeriod(1)" class="w-8 h-8 rounded-full bg-white text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-xs active:scale-90 transition">
+            <i class="ph ph-caret-right-bold text-base"></i>
+          </button>
+        </div>
+
+        <!-- 3. 실시간 검색창 (판매수익 검색: ex 엔비디아, AAPL) -->
+        <div class="relative">
+          <input type="text" id="saleSearchInput" oninput="handleSaleSearch(this.value)" placeholder="판매수익 검색 (종목명, 티커: ex 엔비디아, AAPL)" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-800 outline-none focus:border-blue-500 focus:bg-white transition shadow-2xs">
+          <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+          <button onclick="clearSaleSearch()" id="saleSearchClearBtn" class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-gray-600">
+            <i class="ph ph-x-circle-fill text-base"></i>
+          </button>
+        </div>
+
+        <!-- 해당 기간 집계 실현 수익 금액 및 수익률 -->
+        <div class="p-4 rounded-2xl bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-100 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-400 font-medium">실현 손익 합계 (순수익)</span>
+            <h4 id="saleTotalProfitAmount" class="text-2xl font-extrabold color-up mt-0.5">+0원</h4>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-gray-400 font-medium">수익률</span>
+            <div class="mt-0.5">
+              <span id="saleTotalProfitRate" class="text-sm font-extrabold px-2.5 py-1 rounded-xl bg-up-light color-up">+0.00%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 해당 기간 동안 발생한 매도 종목 상세 리스트 (수수료/제세금/정산금액 표시 + 터치 수정) -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-gray-600">매도 내역 (<span id="saleItemCount">0</span>)</span>
+            <span class="text-[10px] text-gray-400">항목 터치 시 매도 내역 수정</span>
+          </div>
+          <div id="saleItemList" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- 2-2. 원형 도넛 그래프 (포트폴리오 비중) -->
+      <div class="bg-white rounded-3xl p-6 shadow-xs border border-gray-100">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-bold text-base text-gray-900">포트폴리오 자산 비중</h3>
+          <span class="text-xs text-gray-400">비율 확인</span>
+        </div>
+        <p class="text-xs text-gray-400 mb-4">보유 주식 및 달러 현금의 전체 자산 대비 구성 비율입니다.</p>
+        
+        <div class="h-52 w-full relative flex items-center justify-center">
+          <canvas id="doughnutChart"></canvas>
+        </div>
+
+        <div id="doughnutLegend" class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-100 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- [섹션 3] 거래 내역 & 입출금 내역 뷰 -->
+    <section id="viewHistory" class="px-4 space-y-4 flex-1 mt-3 hidden">
+      <div class="flex items-center justify-between">
+        <div class="flex gap-2">
+          <button id="subTabTrades" onclick="switchHistorySubTab('trades')" class="text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white">
+            주식 매매 내역 (<span id="tradeCountLabel">0</span>)
+          </button>
+          <button id="subTabCash" onclick="switchHistorySubTab('cash')" class="text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200">
+            달러 입출금 내역 (<span id="cashCountLabel">0</span>)
+          </button>
+        </div>
+
+        <button onclick="openCurrentActionModal()" class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-full hover:bg-blue-100 transition active:scale-95">
+          + 내역 등록
+        </button>
+      </div>
+
+      <!-- 내역 전용 검색 입력창 -->
+      <div class="relative">
+        <input type="text" id="historySearchInput" oninput="handleHistorySearch(this.value)" placeholder="내역 검색" class="w-full bg-white border border-gray-200 rounded-2xl pl-9 pr-8 py-2.5 text-xs text-gray-800 outline-none focus:border-blue-500 transition shadow-2xs">
+        <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"></i>
+        <button onclick="clearHistorySearch()" id="historySearchClearBtn" class="hidden absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+          <i class="ph ph-x-circle-fill text-base"></i>
+        </button>
+      </div>
+
+      <div class="text-[11px] text-gray-400 px-1 font-medium flex items-center gap-1">
+        <i class="ph ph-cursor-click"></i>
+        <span>내역 항목을 터치하면 바로 수정할 수 있습니다.</span>
+      </div>
+
+      <div id="tradeHistoryList" class="space-y-2.5 pb-6"></div>
+      <div id="cashHistoryList" class="space-y-2.5 pb-6 hidden"></div>
+    </section>
+
+    <!-- [모달 1] 주식 매수/매도 등록 및 수정 모달 -->
+    <div id="tradeModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center">
+          <h4 id="tradeModalTitle" class="text-lg font-bold text-gray-900">주식 거래 등록</h4>
+          <button onclick="closeModal('tradeModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <form id="tradeForm" onsubmit="handleTradeSubmit(event)" class="space-y-3 text-sm">
+          <input type="hidden" id="editTradeId" value="">
+
+          <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+            <button type="button" id="btnTypeBuy" onclick="setTradeType('BUY')" class="py-2 rounded-lg bg-red-500 text-white shadow-xs">매수 (Buy)</button>
+            <button type="button" id="btnTypeSell" onclick="setTradeType('SELL')" class="py-2 rounded-lg text-gray-600">매도 (Sell)</button>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">티커 심볼 (Ticker)</label>
+            <input id="inputTradeSymbol" type="text" placeholder="예: AAPL, OKLO, NVDA, TSLA" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 uppercase font-mono font-bold text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">종목 표시명</label>
+            <input id="inputTradeName" type="text" placeholder="예: 애플, 오클로, 엔비디아" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">체결 수량 (주)</label>
+              <input id="inputTradeShares" type="number" step="any" min="0.0001" placeholder="10" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-800 outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">체결 단가 ($ USD)</label>
+              <input id="inputTradePrice" type="number" step="any" min="0.01" placeholder="142.95" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-800 outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">거래 일자 및 시간</label>
+            <input id="inputTradeDate" type="datetime-local" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button type="submit" id="btnTradeSubmit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-md transition active:scale-[0.98]">
+              저장하기
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- [모달 2] 달러 입출금 등록 및 수정 모달 -->
+    <div id="cashModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center">
+          <h4 id="cashModalTitle" class="text-lg font-bold text-gray-900">달러 입출금 등록</h4>
+          <button onclick="closeModal('cashModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <form id="cashForm" onsubmit="handleCashSubmit(event)" class="space-y-3 text-sm">
+          <input type="hidden" id="editCashId" value="">
+
+          <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+            <button type="button" id="btnCashDeposit" onclick="setCashType('DEPOSIT')" class="py-2 rounded-lg bg-blue-600 text-white shadow-xs">달러 입금 (+)</button>
+            <button type="button" id="btnCashWithdraw" onclick="setCashType('WITHDRAW')" class="py-2 rounded-lg text-gray-600">달러 출금 (-)</button>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">금액 ($ USD)</label>
+            <input id="inputCashAmount" type="number" step="any" min="0.01" placeholder="1000.00" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 font-bold text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">메모 (선택)</label>
+            <input id="inputCashMemo" type="text" placeholder="예: 해외 계좌 입금, 배당금 입금" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">일시</label>
+            <input id="inputCashDate" type="datetime-local" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button type="submit" id="btnCashSubmit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-md transition active:scale-[0.98]">
+              저장하기
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- [모달 3] 데이터 TXT 파일 백업 및 복원 모달 -->
+    <div id="backupModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center">
+          <h4 class="text-lg font-bold text-gray-900">데이터 백업 및 복원</h4>
+          <button onclick="closeModal('backupModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-500 leading-relaxed">
+          주식 거래 내역, 달러 입출금 기록, 설정된 API 토큰을 <strong>.txt 백업 파일</strong>로 다운로드하여 영구 보관하거나 다시 불러올 수 있습니다.
+        </p>
+
+        <div class="space-y-3 pt-1">
+          <button onclick="exportToTxtFile()" class="w-full py-3 bg-[#191f28] hover:bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition active:scale-98">
+            <i class="ph ph-download-simple text-base"></i>
+            <span>내역 전체 TXT 파일로 백업 다운로드</span>
+          </button>
+
+          <div class="border border-dashed border-gray-300 rounded-2xl p-4 text-center">
+            <label class="block text-xs font-bold text-gray-700 mb-2">백업한 TXT 파일 복원하기</label>
+            <input type="file" id="importFileInput" accept=".txt,.json" onchange="importFromTxtFile(event)" class="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 cursor-pointer">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- [모달 4] Finnhub API Key 설정 모달 -->
+    <div id="apiKeyModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+        <div class="flex justify-between items-center">
+          <h4 class="text-lg font-bold text-gray-900">Finnhub API 설정</h4>
+          <button onclick="closeModal('apiKeyModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-500 leading-relaxed">
+          Finnhub 무료 API Key를 입력하시면 미국 나스닥 실시간 체결 WebSocket에 직접 접속합니다.
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">API Token</label>
+            <input id="inputApiKey" type="text" placeholder="예: c123456789..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="saveApiKey()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">
+              토큰 저장 및 연결
+            </button>
+            <a href="https://finnhub.io/register" target="_blank" class="py-2.5 px-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-xs flex items-center justify-center hover:bg-gray-200 transition">
+              키 발급
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ===================================================
+    // 1. 핵심 상태 및 데이터 저장소 (LocalStorage 기반)
+    // ===================================================
+    const STORAGE_KEY_TRADES = "TOSS_APP_TRADES_V2";
+    const STORAGE_KEY_CASH = "TOSS_APP_CASH_V2";
+    const STORAGE_KEY_API = "FINNHUB_API_KEY";
+    const STORAGE_KEY_RATE = "EXCHANGE_RATE";
+    const STORAGE_KEY_CURRENCY = "DISPLAY_CURRENCY";
+    const STORAGE_KEY_HOLDING_FEE = "APPLY_HOLDING_FEE_MODE"; // 오직 보유 주식에만 적용되는 토글 상태
+
+    let finnhubKey = localStorage.getItem(STORAGE_KEY_API) || 'sandbox_c0123456789';
+    let exchangeRate = parseFloat(localStorage.getItem(STORAGE_KEY_RATE)) || 1347.0;
+    let displayCurrency = localStorage.getItem(STORAGE_KEY_CURRENCY) || 'KRW';
+    // 보유 주식에서만 작동하는 수수료 토글 (기본 ON)
+    let applyHoldingFee = localStorage.getItem(STORAGE_KEY_HOLDING_FEE) !== 'false';
+    let currentSortMode = 'val_desc';
+    let activeNavTab = 'dashboard';
+    let activeHistorySubTab = 'trades';
+
+    // 특정 날짜 기준 시뮬레이션 상태 (null이면 오늘/현재 기준)
+    let selectedAsOfDate = null;
+
+    // 토스 판매수익 기간 이동 뷰어 상태 및 검색어
+    let saleProfitMode = 'MONTH'; // 'DAY', 'MONTH', 'YEAR', 'ALL'
+    let saleCurrentAnchorDate = new Date(); // 기준 일자
+    let saleSearchKeyword = '';
+    let historySearchKeyword = '';
+
+    let trades = JSON.parse(localStorage.getItem(STORAGE_KEY_TRADES)) || [
+      {
+        id: "trade-1",
+        type: "BUY",
+        symbol: "OKLO",
+        name: "오클로",
+        shares: 100,
+        price: 142.95,
+        date: "2026-09-09T10:00:00"
+      },
+      {
+        id: "trade-2",
+        type: "BUY",
+        symbol: "AAPL",
+        name: "애플",
+        shares: 15,
+        price: 82.50,
+        date: "2024-03-01T10:30:00"
+      }
+    ];
+
+    let cashTransactions = JSON.parse(localStorage.getItem(STORAGE_KEY_CASH)) || [
+      {
+        id: "cash-1",
+        type: "DEPOSIT",
+        amount: 25000.00,
+        memo: "초기 달러 예수금",
+        date: "2024-01-01T09:00:00"
+      }
+    ];
+
+    let quotePrices = {
+      "OKLO": 150.00,
+      "AAPL": 122.07
+    };
+
+    let historicalPriceCache = {};
+
+    let socket = null;
+    let trendChart = null;
+    let doughnutChart = null;
+
+    let currentTradeType = 'BUY';
+    let currentCashType = 'DEPOSIT';
+
+    // ===================================================
+    // 1-1. 특정 기준 날짜(As-Of Date) 헬퍼
+    // ===================================================
+    function getEffectiveCutoffDate() {
+      if (selectedAsOfDate) {
+        const parts = selectedAsOfDate.split('-');
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 23, 59, 59, 999);
+      }
+      return new Date();
+    }
+
+    function isAsOfMode() {
+      if (!selectedAsOfDate) return false;
+      const todayStr = formatDateKey(new Date());
+      return selectedAsOfDate < todayStr;
+    }
+
+    function handleAsOfDateChange(val) {
+      selectedAsOfDate = val || null;
+      updateAsOfUI();
+      renderAll();
+      updateTrendChart();
+    }
+
+    function resetAsOfDate() {
+      selectedAsOfDate = formatDateKey(new Date());
+      document.getElementById('asOfDateInput').value = selectedAsOfDate;
+      updateAsOfUI();
+      renderAll();
+      updateTrendChart();
+    }
+
+    function updateAsOfUI() {
+      const resetBtn = document.getElementById('asOfResetBtn');
+      const todayStr = formatDateKey(new Date());
+      if (selectedAsOfDate && selectedAsOfDate !== todayStr) {
+        resetBtn.classList.remove('hidden');
+      } else {
+        resetBtn.classList.add('hidden');
+      }
+    }
+
+    // ===================================================
+    // 2. 토스증권 거래내역서 기준 정밀 수수료/제세금 산정 공식
+    // ===================================================
+    function calcTossBuyFee(grossAmountUsd) {
+      return Math.round(grossAmountUsd * 0.001 * 100) / 100;
+    }
+
+    function calcTossSellFeeComponents(grossAmountUsd) {
+      const commission = Math.round(grossAmountUsd * 0.001 * 100) / 100;
+      const rawSec = grossAmountUsd * 0.0000278;
+      let secTax = 0;
+      if (rawSec > 0) {
+        secTax = Math.max(0.01, Math.round(rawSec * 100) / 100);
+      }
+      return {
+        commission: commission,
+        secTax: secTax,
+        totalFees: commission + secTax
+      };
+    }
+
+    function calcTossSellFee(grossAmountUsd) {
+      return calcTossSellFeeComponents(grossAmountUsd).totalFees;
+    }
+
+    // ===================================================
+    // 3. 예수금(현금) 잔액 산출: 매수 시 현금 차감, 매도 시 현금 가산
+    // ===================================================
+    function computeCashUsd() {
+      let total = 0;
+      const cutoffTime = getEffectiveCutoffDate().getTime();
+      
+      cashTransactions.forEach(c => {
+        if (new Date(c.date).getTime() <= cutoffTime) {
+          if (c.type === 'DEPOSIT') total += Number(c.amount);
+          else if (c.type === 'WITHDRAW') total -= Number(c.amount);
+        }
+      });
+
+      trades.forEach(t => {
+        if (new Date(t.date).getTime() <= cutoffTime) {
+          const gross = Number(t.shares) * Number(t.price);
+          if (t.type === 'BUY') {
+            const buyFee = calcTossBuyFee(gross);
+            total -= (gross + buyFee);
+          } else if (t.type === 'SELL') {
+            const sellFee = calcTossSellFee(gross);
+            total += (gross - sellFee);
+          }
+        }
+      });
+
+      return total;
+    }
+
+    // ===================================================
+    // 4. 포트폴리오 보유 주식 산출 (수수료 토글은 보유주식에서만 작동)
+    // ===================================================
+    function computeHoldings() {
+      const map = {};
+      const cutoffTime = getEffectiveCutoffDate().getTime();
+      const cutoffDate = getEffectiveCutoffDate();
+      const historicalMode = isAsOfMode();
+
+      const sortedTrades = [...trades]
+        .filter(t => new Date(t.date).getTime() <= cutoffTime)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      sortedTrades.forEach(t => {
+        const sym = t.symbol.toUpperCase();
+        if (!map[sym]) {
+          map[sym] = {
+            symbol: sym,
+            name: t.name || sym,
+            shares: 0,
+            totalCostUsd: 0,
+            firstDate: t.date
+          };
+        }
+
+        const grossTradeAmount = Number(t.shares) * Number(t.price);
+
+        if (t.type === 'BUY') {
+          const buyFee = calcTossBuyFee(grossTradeAmount);
+          map[sym].shares += Number(t.shares);
+          map[sym].totalCostUsd += (grossTradeAmount + buyFee);
+        } else if (t.type === 'SELL') {
+          const prevShares = map[sym].shares;
+          const sellShares = Number(t.shares);
+          if (prevShares > 0) {
+            const avg = map[sym].totalCostUsd / prevShares;
+            map[sym].shares = Math.max(0, prevShares - sellShares);
+            map[sym].totalCostUsd = Math.max(0, map[sym].shares * avg);
+          }
+        }
+      });
+
+      const holdings = [];
+      Object.keys(map).forEach(sym => {
+        const item = map[sym];
+        if (item.shares > 0.00001) {
+          const avgPrice = item.totalCostUsd / item.shares;
+          let currentPrice;
+          if (historicalMode) {
+            currentPrice = getStockCloseOnDate(sym, cutoffDate);
+          } else {
+            currentPrice = quotePrices[sym] || avgPrice;
+          }
+
+          const rawEvalUsd = item.shares * currentPrice;
+          
+          let sellFees = 0;
+          if (applyHoldingFee) {
+            sellFees = calcTossSellFee(rawEvalUsd);
+          }
+
+          const evalUsd = Math.max(0, rawEvalUsd - sellFees);
+          const profitUsd = evalUsd - item.totalCostUsd;
+          const profitRate = item.totalCostUsd > 0 ? (profitUsd / item.totalCostUsd) * 100 : 0;
+
+          holdings.push({
+            symbol: sym,
+            name: item.name,
+            shares: item.shares,
+            avgPrice: avgPrice,
+            currentPrice: currentPrice,
+            rawEvalUsd: rawEvalUsd,
+            evalUsd: evalUsd,
+            costUsd: item.totalCostUsd,
+            profitUsd: profitUsd,
+            profitRate: profitRate
+          });
+        }
+      });
+
+      holdings.sort((a, b) => {
+        if (currentSortMode === 'val_desc') return b.evalUsd - a.evalUsd;
+        if (currentSortMode === 'val_asc') return a.evalUsd - b.evalUsd;
+        if (currentSortMode === 'rate_desc') return b.profitRate - a.profitRate;
+        if (currentSortMode === 'rate_asc') return a.profitRate - b.profitRate;
+        return 0;
+      });
+
+      return holdings;
+    }
+
+    // ===================================================
+    // 5. 실현 판매수익 엔진
+    // ===================================================
+    function calculateRealizedProfits() {
+      const cutoffTime = getEffectiveCutoffDate().getTime();
+      const sortedTrades = [...trades]
+        .filter(t => new Date(t.date).getTime() <= cutoffTime)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      const pool = {};
+      const sales = [];
+
+      sortedTrades.forEach(t => {
+        const sym = t.symbol.toUpperCase();
+        if (!pool[sym]) {
+          pool[sym] = { shares: 0, costUsd: 0 };
+        }
+
+        const gross = Number(t.shares) * Number(t.price);
+
+        if (t.type === 'BUY') {
+          const buyFee = calcTossBuyFee(gross);
+          pool[sym].shares += Number(t.shares);
+          pool[sym].costUsd += (gross + buyFee);
+        } else if (t.type === 'SELL') {
+          const sellShares = Number(t.shares);
+          const prevShares = pool[sym].shares;
+          const avgCostPerShare = prevShares > 0 ? (pool[sym].costUsd / prevShares) : Number(t.price);
+
+          const costBasis = sellShares * avgCostPerShare;
+          const feePack = calcTossSellFeeComponents(gross);
+          const netProceeds = gross - feePack.totalFees;
+          const profitUsd = netProceeds - costBasis;
+          const profitRate = costBasis > 0 ? (profitUsd / costBasis) * 100 : 0;
+
+          sales.push({
+            id: t.id,
+            symbol: sym,
+            name: t.name || sym,
+            shares: sellShares,
+            price: Number(t.price),
+            date: t.date,
+            grossUsd: gross,
+            commission: feePack.commission,
+            secTax: feePack.secTax,
+            totalFee: feePack.totalFees,
+            netProceeds: netProceeds,
+            costBasis: costBasis,
+            profitUsd: profitUsd,
+            profitRate: profitRate
+          });
+
+          pool[sym].shares = Math.max(0, prevShares - sellShares);
+          pool[sym].costUsd = Math.max(0, pool[sym].shares * avgCostPerShare);
+        }
+      });
+
+      return sales;
+    }
+
+    function changeSaleProfitMode(mode) {
+      saleProfitMode = mode;
+      const modes = ['Day', 'Month', 'Year', 'All'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`saleMode${m}`);
+        if (m.toUpperCase() === mode) {
+          btn.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition font-bold";
+        } else {
+          btn.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition font-bold text-gray-500";
+        }
+      });
+
+      const btnPrev = document.getElementById('btnSalePrev');
+      const btnNext = document.getElementById('btnSaleNext');
+      if (mode === 'ALL') {
+        btnPrev.classList.add('opacity-30', 'pointer-events-none');
+        btnNext.classList.add('opacity-30', 'pointer-events-none');
+      } else {
+        btnPrev.classList.remove('opacity-30', 'pointer-events-none');
+        btnNext.classList.remove('opacity-30', 'pointer-events-none');
+      }
+
+      renderSaleProfitSection();
+    }
+
+    function navigateSalePeriod(direction) {
+      if (saleProfitMode === 'ALL') return;
+
+      const d = new Date(saleCurrentAnchorDate);
+      if (saleProfitMode === 'DAY') {
+        d.setDate(d.getDate() + direction);
+      } else if (saleProfitMode === 'MONTH') {
+        d.setMonth(d.getMonth() + direction);
+      } else if (saleProfitMode === 'YEAR') {
+        d.setFullYear(d.getFullYear() + direction);
+      }
+      saleCurrentAnchorDate = d;
+      renderSaleProfitSection();
+    }
+
+    function handleSaleSearch(val) {
+      saleSearchKeyword = val.trim().toLowerCase();
+      document.getElementById('saleSearchClearBtn').classList.toggle('hidden', saleSearchKeyword === '');
+      renderSaleProfitSection();
+    }
+
+    function clearSaleSearch() {
+      saleSearchKeyword = '';
+      document.getElementById('saleSearchInput').value = '';
+      document.getElementById('saleSearchClearBtn').classList.add('hidden');
+      renderSaleProfitSection();
+    }
+
+    function renderSaleProfitSection() {
+      const titleEl = document.getElementById('salePeriodTitle');
+      const subEl = document.getElementById('salePeriodSub');
+      const totalAmountEl = document.getElementById('saleTotalProfitAmount');
+      const totalRateEl = document.getElementById('saleTotalProfitRate');
+      const countEl = document.getElementById('saleItemCount');
+      const listEl = document.getElementById('saleItemList');
+
+      const anchor = new Date(saleCurrentAnchorDate);
+      let startDate, endDate, periodTitleText, periodSubText;
+
+      const y = anchor.getFullYear();
+      const m = anchor.getMonth();
+      const d = anchor.getDate();
+
+      if (saleProfitMode === 'DAY') {
+        startDate = new Date(y, m, d, 0, 0, 0);
+        endDate = new Date(y, m, d, 23, 59, 59, 999);
+        periodTitleText = `${y}년 ${m + 1}월 ${d}일`;
+        periodSubText = "선택된 날짜 기준 실현 순손익";
+      } else if (saleProfitMode === 'MONTH') {
+        startDate = new Date(y, m, 1, 0, 0, 0);
+        endDate = new Date(y, m + 1, 0, 23, 59, 59, 999);
+        periodTitleText = `${y}년 ${m + 1}월`;
+        periodSubText = "해당 월 누적 실현 순손익";
+      } else if (saleProfitMode === 'YEAR') {
+        startDate = new Date(y, 0, 1, 0, 0, 0);
+        endDate = new Date(y, 11, 31, 23, 59, 59, 999);
+        periodTitleText = `${y}년`;
+        periodSubText = "연간 누적 실현 순손익";
+      } else {
+        startDate = new Date(0);
+        endDate = new Date(8640000000000000);
+        periodTitleText = "전체 기간";
+        periodSubText = "계좌 총 누적 실현 순손익";
+      }
+
+      titleEl.textContent = periodTitleText;
+      subEl.textContent = periodSubText;
+
+      const allSales = calculateRealizedProfits();
+      let filteredSales = allSales.filter(s => {
+        const tTime = new Date(s.date).getTime();
+        return tTime >= startDate.getTime() && tTime <= endDate.getTime();
+      });
+
+      if (saleSearchKeyword) {
+        filteredSales = filteredSales.filter(s => 
+          s.name.toLowerCase().includes(saleSearchKeyword) || 
+          s.symbol.toLowerCase().includes(saleSearchKeyword)
+        );
+      }
+
+      countEl.textContent = filteredSales.length;
+
+      let sumProfitUsd = 0;
+      let sumCostBasisUsd = 0;
+
+      filteredSales.forEach(s => {
+        sumProfitUsd += s.profitUsd;
+        sumCostBasisUsd += s.costBasis;
+      });
+
+      const overallRate = sumCostBasisUsd > 0 ? (sumProfitUsd / sumCostBasisUsd) * 100 : 0;
+      const isUp = sumProfitUsd >= 0;
+      const sign = isUp ? '+' : '';
+      const colorClass = isUp ? 'color-up' : 'color-down';
+      const bgClass = isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
+
+      totalAmountEl.className = `text-2xl font-extrabold ${colorClass} mt-0.5`;
+      totalAmountEl.textContent = `${sign}${formatMoney(sumProfitUsd)}`;
+
+      totalRateEl.className = `text-sm font-extrabold px-2.5 py-1 rounded-xl ${bgClass}`;
+      totalRateEl.textContent = `${sign}${overallRate.toFixed(2)}%`;
+
+      listEl.innerHTML = '';
+      if (filteredSales.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-6 rounded-2xl bg-gray-50 text-center text-xs text-gray-400 border border-gray-100">
+            ${saleSearchKeyword ? `'${saleSearchKeyword}' 검색 결과와 일치하는 매도 내역이 없습니다.` : '해당 기간에 발생한 매도(판매) 내역이 없습니다.'}
+          </div>
+        `;
+        return;
+      }
+
+      filteredSales.slice().reverse().forEach(s => {
+        const itemUp = s.profitUsd >= 0;
+        const itemSign = itemUp ? '+' : '';
+        const itemColor = itemUp ? 'color-up' : 'color-down';
+        const itemBg = itemUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
+
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-blue-50/40 active:scale-[0.99] cursor-pointer transition";
+        row.onclick = () => openEditTradeModal(s.id);
+        row.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-100/60 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+              ${s.symbol.slice(0, 2)}
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-gray-900 text-xs">${s.name}</span>
+                <span class="text-[10px] text-gray-400 font-mono">${s.symbol}</span>
+              </div>
+              <p class="text-[11px] text-gray-500 mt-0.5 font-medium">
+                ${s.shares}주 매도 · 체결단가 $${s.price.toFixed(2)}
+              </p>
+              <div class="text-[10px] text-gray-400 mt-0.5 space-x-1">
+                <span>정산금액: <strong>$${s.netProceeds.toFixed(2)}</strong></span>
+                <span class="text-gray-300">|</span>
+                <span class="text-rose-500 font-medium">수수료·세금: -$${s.totalFee.toFixed(2)}</span>
+                <span class="text-[9px] text-gray-400">(수수료 $${s.commission.toFixed(2)}, 제세금 $${s.secTax.toFixed(2)})</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-right shrink-0">
+            <p class="font-extrabold text-xs ${itemColor}">
+              ${itemSign}${formatMoney(s.profitUsd)}
+            </p>
+            <span class="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md ${itemBg} mt-0.5">
+              ${itemSign}${s.profitRate.toFixed(2)}%
+            </span>
+            <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+              ${itemSign}$${Math.abs(s.profitUsd).toFixed(2)}
+            </p>
+          </div>
+        `;
+        listEl.appendChild(row);
+      });
+    }
+
+    // ===================================================
+    // 6. Finnhub 실시간 시세 및 API 종가
+    // ===================================================
+    function initFinnhubSocket() {
+      if (socket) {
+        try { socket.close(); } catch(e){}
+      }
+
+      const dot = document.getElementById("wsStatusDot");
+      const statusText = document.getElementById("marketStatusText");
+
+      try {
+        socket = new WebSocket(`wss://ws.finnhub.io?token=${finnhubKey}`);
+
+        socket.onopen = () => {
+          dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm";
+          statusText.textContent = "Finnhub 실시간 체결 웹소켓 연결됨";
+          
+          const holdings = computeHoldings();
+          holdings.forEach(h => {
+            socket.send(JSON.stringify({ type: 'subscribe', symbol: h.symbol }));
+          });
+        };
+
+        socket.onmessage = (event) => {
+          const res = JSON.parse(event.data);
+          if (res.type === 'trade' && Array.isArray(res.data)) {
+            res.data.forEach(t => {
+              const sym = t.s;
+              const price = Number(t.p);
+              if (sym && price > 0) {
+                const oldPrice = quotePrices[sym] || price;
+                quotePrices[sym] = price;
+                
+                const row = document.getElementById(`holding-row-${sym}`);
+                if (row) {
+                  row.classList.remove('tick-up', 'tick-down');
+                  void row.offsetWidth;
+                  row.classList.add(price >= oldPrice ? 'tick-up' : 'tick-down');
+                }
+              }
+            });
+            renderAll();
+            updateTrendChart();
+          }
+        };
+
+        socket.onerror = () => {
+          dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-amber-400";
+          statusText.textContent = "웹소켓 대기 (REST 실시간 종가 모드)";
+        };
+      } catch (err) {
+        dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-gray-400";
+      }
+    }
+
+    async function fetchActualRestQuote(symbol) {
+      try {
+        const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.c && data.c > 0) {
+            return Number(data.c);
+          }
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    async function refreshActualQuotes() {
+      const holdings = computeHoldings();
+      for (let h of holdings) {
+        const p = await fetchActualRestQuote(h.symbol);
+        if (p) quotePrices[h.symbol] = p;
+      }
+      renderAll();
+      fetchAllHistoricalDailyData();
+    }
+
+    // ===================================================
+    // 7. 포맷팅 헬퍼 & 보유 주식 전용 수수료 토글
+    // ===================================================
+    function formatMoney(usdAmount, isKrwForce = false) {
+      if (displayCurrency === 'KRW' || isKrwForce) {
+        const krw = usdAmount * exchangeRate;
+        return `${Math.round(krw).toLocaleString()}원`;
+      } else {
+        return `$${usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    }
+
+    function toggleCurrency() {
+      displayCurrency = (displayCurrency === 'KRW') ? 'USD' : 'KRW';
+      localStorage.setItem(STORAGE_KEY_CURRENCY, displayCurrency);
+      document.getElementById('currencyToggleLabel').textContent = displayCurrency === 'KRW' ? 'USD로 보기' : '원화로 보기';
+      document.getElementById('chartLegendCaption').textContent = `합산 자산 추이 (${displayCurrency === 'KRW' ? '원화 환산' : '달러 기준'})`;
+      renderAll();
+      updateTrendChart();
+    }
+
+    function toggleFeeMode() {
+      applyHoldingFee = !applyHoldingFee;
+      localStorage.setItem(STORAGE_KEY_HOLDING_FEE, applyHoldingFee);
+      updateFeeToggleUI();
+      renderHoldings();
+    }
+
+    function updateFeeToggleUI() {
+      const btn = document.getElementById('feeToggleBtn');
+      if (applyHoldingFee) {
+        btn.className = "flex items-center gap-1 bg-blue-50 border border-blue-400 px-2 py-1 rounded-full text-[11px] font-extrabold text-blue-700 shadow-xs active:scale-95 transition";
+        btn.innerHTML = `<i class="ph ph-check-bold text-xs text-blue-600"></i><span>수수료 ON</span>`;
+      } else {
+        btn.className = "flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition";
+        btn.innerHTML = `<i class="ph ph-receipt text-xs"></i><span>수수료 OFF</span>`;
+      }
+    }
+
+    function handleSortChange(val) {
+      currentSortMode = val;
+      renderHoldings();
+    }
+
+    function promptExchangeRate() {
+      const input = prompt("적용할 환율(1 USD당 KRW)을 입력하세요:", exchangeRate);
+      if (input && !isNaN(input) && Number(input) > 0) {
+        exchangeRate = Number(input);
+        localStorage.setItem(STORAGE_KEY_RATE, exchangeRate);
+        document.getElementById('rateLabel').textContent = `${Math.round(exchangeRate).toLocaleString()}원`;
+        renderAll();
+        updateTrendChart();
+      }
+    }
+
+    // ===================================================
+    // 8. 대시보드 및 보유 주식 목록 렌더링
+    // ===================================================
+    function renderDashboardHeader() {
+      const cutoffTime = getEffectiveCutoffDate().getTime();
+      const cutoffDate = getEffectiveCutoffDate();
+      const historicalMode = isAsOfMode();
+
+      const sortedTrades = [...trades]
+        .filter(t => new Date(t.date).getTime() <= cutoffTime)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      const map = {};
+
+      sortedTrades.forEach(t => {
+        const sym = t.symbol.toUpperCase();
+        if (!map[sym]) {
+          map[sym] = { shares: 0, totalCostUsd: 0 };
+        }
+        const gross = Number(t.shares) * Number(t.price);
+        if (t.type === 'BUY') {
+          const buyFee = calcTossBuyFee(gross);
+          map[sym].shares += Number(t.shares);
+          map[sym].totalCostUsd += (gross + buyFee);
+        } else if (t.type === 'SELL') {
+          const prev = map[sym].shares;
+          const sellShares = Number(t.shares);
+          if (prev > 0) {
+            const avg = map[sym].totalCostUsd / prev;
+            map[sym].shares = Math.max(0, prev - sellShares);
+            map[sym].totalCostUsd = Math.max(0, map[sym].shares * avg);
+          }
+        }
+      });
+
+      let totalStockEvalUsd = 0;
+      let totalStockCostUsd = 0;
+
+      Object.keys(map).forEach(sym => {
+        const item = map[sym];
+        if (item.shares > 0.00001) {
+          let curPrice;
+          if (historicalMode) {
+            curPrice = getStockCloseOnDate(sym, cutoffDate);
+          } else {
+            curPrice = quotePrices[sym] || (item.totalCostUsd / item.shares);
+          }
+          const rawVal = item.shares * curPrice;
+          const sellFee = calcTossSellFee(rawVal);
+          totalStockEvalUsd += Math.max(0, rawVal - sellFee);
+          totalStockCostUsd += item.totalCostUsd;
+        }
+      });
+
+      const cashUsd = computeCashUsd();
+      const totalAssetUsd = totalStockEvalUsd + cashUsd;
+      const totalProfitUsd = totalStockEvalUsd - totalStockCostUsd;
+      const totalProfitRate = totalStockCostUsd > 0 ? (totalProfitUsd / totalStockCostUsd) * 100 : 0;
+
+      document.getElementById('totalAssetDisplay').textContent = formatMoney(totalAssetUsd);
+
+      const isUp = totalProfitUsd >= 0;
+      const sign = isUp ? '+' : '';
+      const colorClass = isUp ? 'color-up' : 'color-down';
+      const bgBadgeClass = isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
+
+      const amountEl = document.getElementById('totalProfitAmountDisplay');
+      amountEl.className = `text-base font-extrabold ${colorClass}`;
+      amountEl.textContent = `${sign}${formatMoney(totalProfitUsd)}`;
+
+      const badgeEl = document.getElementById('totalProfitRateBadge');
+      badgeEl.className = `text-xs font-bold px-2 py-0.5 rounded-full ${bgBadgeClass}`;
+      badgeEl.textContent = `${sign}${totalProfitRate.toFixed(2)}%`;
+
+      document.getElementById('usdCashDisplay').textContent = `$${cashUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('usdCashKrwSub').textContent = `(${Math.round(cashUsd * exchangeRate).toLocaleString()}원)`;
+      document.getElementById('holdingStockCountBadge').textContent = computeHoldings().length;
+    }
+
+    function renderHoldings() {
+      const holdings = computeHoldings();
+      const container = document.getElementById('holdingStockList');
+      container.innerHTML = '';
+
+      if (holdings.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100">
+            <i class="ph ph-chart-line-up text-3xl mb-1 text-gray-300"></i>
+            <p class="text-sm font-semibold text-gray-500">보유 중인 주식이 없습니다.</p>
+            <p class="text-xs text-gray-400 mt-1">상단의 '+ 거래 등록' 버튼으로 매수 내역을 추가해보세요.</p>
+          </div>
+        `;
+        return;
+      }
+
+      holdings.forEach(stock => {
+        const isUp = stock.profitRate >= 0;
+        const colorClass = isUp ? 'color-up' : 'color-down';
+        const bgBadgeClass = isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
+        const sign = isUp ? '+' : '';
+
+        const card = document.createElement('div');
+        card.id = `holding-row-${stock.symbol}`;
+        card.className = "bg-white rounded-3xl p-5 shadow-xs border border-gray-100/90 flex items-center justify-between hover:shadow-sm transition-all";
+        card.innerHTML = `
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50/70 border border-blue-100/60 text-blue-600 flex items-center justify-center text-xl font-black shadow-xs shrink-0">
+              ${stock.symbol.slice(0, 2)}
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-bold text-gray-900 text-base leading-tight">${stock.name}</span>
+                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">${stock.symbol}</span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1 font-medium">
+                ${stock.shares.toLocaleString()}주 · 평단 $${stock.avgPrice.toFixed(2)}
+              </p>
+              <p class="text-xs text-gray-500 font-semibold mt-0.5">
+                ${isAsOfMode() ? '기준가' : '현재가'} <span class="font-bold text-gray-800">$${stock.currentPrice.toFixed(2)}</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <p class="font-extrabold text-[17px] text-gray-900 tracking-tight">
+              ${formatMoney(stock.evalUsd)}
+            </p>
+            <div class="flex items-center justify-end gap-1.5 mt-1">
+              <span class="text-xs font-extrabold ${colorClass}">
+                ${sign}${formatMoney(stock.profitUsd)}
+              </span>
+              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-md ${bgBadgeClass}">
+                ${sign}${stock.profitRate.toFixed(2)}%
+              </span>
+            </div>
+            <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+              ${sign}$${Math.abs(stock.profitUsd).toFixed(2)}
+            </p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ===================================================
+    // 9. 일별 종가 및 자산 추이 인터랙티브 차트 엔진
+    // ===================================================
+    let selectedPeriodKey = '1M';
+
+    function formatDateKey(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    async function fetchAllHistoricalDailyData() {
+      const symbols = Array.from(new Set(trades.map(t => t.symbol.toUpperCase())));
+      if (symbols.length === 0) return;
+
+      const toTime = Math.floor(Date.now() / 1000);
+      const fromTime = toTime - (220 * 24 * 3600);
+
+      for (let sym of symbols) {
+        if (!historicalPriceCache[sym]) historicalPriceCache[sym] = {};
+
+        let fetched = false;
+
+        if (finnhubKey && !finnhubKey.startsWith('sandbox_')) {
+          try {
+            const fhUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${sym}&resolution=D&from=${fromTime}&to=${toTime}&token=${finnhubKey}`;
+            const res = await fetch(fhUrl);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.s === 'ok' && Array.isArray(data.c) && Array.isArray(data.t)) {
+                data.t.forEach((ts, idx) => {
+                  const dk = formatDateKey(new Date(ts * 1000));
+                  const closeVal = Number(data.c[idx]);
+                  if (!isNaN(closeVal) && closeVal > 0) {
+                    historicalPriceCache[sym][dk] = closeVal;
+                  }
+                });
+                fetched = true;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (!fetched) {
+          try {
+            const yahooTarget = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=6mo&interval=1d`;
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooTarget)}`;
+            const res = await fetch(proxyUrl);
+            if (res.ok) {
+              const data = await res.json();
+              const result = data?.chart?.result?.[0];
+              if (result && result.timestamp && result.indicators?.quote?.[0]?.close) {
+                const timestamps = result.timestamp;
+                const closes = result.indicators.quote[0].close;
+                timestamps.forEach((ts, idx) => {
+                  const closeVal = closes[idx];
+                  if (closeVal !== null && closeVal !== undefined && !isNaN(closeVal)) {
+                    const dk = formatDateKey(new Date(ts * 1000));
+                    historicalPriceCache[sym][dk] = Number(closeVal);
+                  }
+                });
+                fetched = true;
+              }
+            }
+          } catch (e) {}
+        }
+
+        const todayKey = formatDateKey(new Date());
+        if (quotePrices[sym] && !historicalPriceCache[sym][todayKey]) {
+          historicalPriceCache[sym][todayKey] = quotePrices[sym];
+        }
+      }
+
+      updateTrendChart();
+    }
+
+    function getStockCloseOnDate(symbol, targetDate) {
+      const cache = historicalPriceCache[symbol] || {};
+      const key = formatDateKey(targetDate);
+
+      if (cache[key] !== undefined) {
+        return cache[key];
+      }
+
+      const tempDate = new Date(targetDate);
+      for (let i = 1; i <= 10; i++) {
+        tempDate.setDate(tempDate.getDate() - 1);
+        const prevKey = formatDateKey(tempDate);
+        if (cache[prevKey] !== undefined) {
+          return cache[prevKey];
+        }
+      }
+
+      const targetTime = new Date(targetDate).setHours(23, 59, 59, 999);
+      const pastTradesForSymbol = trades
+        .filter(t => t.symbol.toUpperCase() === symbol && new Date(t.date).getTime() <= targetTime)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      if (pastTradesForSymbol.length > 0) {
+        return Number(pastTradesForSymbol[0].price);
+      }
+
+      return quotePrices[symbol] || 100.0;
+    }
+
+    function generateDailyAssetData(periodKey) {
+      const effectiveEndDate = getEffectiveCutoffDate();
+      const todayYear = effectiveEndDate.getFullYear();
+      const todayMonth = effectiveEndDate.getMonth();
+      const todayDate = effectiveEndDate.getDate();
+
+      let startDate = new Date(todayYear, todayMonth, todayDate);
+
+      if (periodKey === '1M') {
+        startDate.setDate(todayDate - 29);
+      } else if (periodKey === '3M') {
+        startDate.setDate(todayDate - 89);
+      } else if (periodKey === '6M') {
+        startDate.setMonth(todayMonth - 6);
+      } else {
+        let earliestTime = effectiveEndDate.getTime();
+        trades.forEach(t => {
+          const tm = new Date(t.date).getTime();
+          if (tm < earliestTime) earliestTime = tm;
+        });
+        cashTransactions.forEach(c => {
+          const tm = new Date(c.date).getTime();
+          if (tm < earliestTime) earliestTime = tm;
+        });
+        startDate = new Date(earliestTime);
+        startDate.setHours(0, 0, 0, 0);
+
+        const minSpanDate = new Date(todayYear, todayMonth, todayDate - 29);
+        if (startDate > minSpanDate) startDate = minSpanDate;
+      }
+      startDate.setHours(0, 0, 0, 0);
+
+      const labels = [];
+      const dates = [];
+      const valuesUsd = [];
+
+      const processedDays = new Set();
+      const cur = new Date(startDate.getTime());
+      const endBoundary = new Date(todayYear, todayMonth, todayDate, 23, 59, 59, 999);
+
+      while (cur.getTime() <= endBoundary.getTime()) {
+        const dateKey = formatDateKey(cur);
+        if (!processedDays.has(dateKey)) {
+          processedDays.add(dateKey);
+
+          const endOfDay = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 23, 59, 59, 999);
+          const endOfDayTime = endOfDay.getTime();
+
+          const m = cur.getMonth() + 1;
+          const d = cur.getDate();
+          labels.push(`${m}/${d}`);
+          dates.push(`${cur.getFullYear()}.${m}.${d}`);
+
+          let dayCashUsd = 0;
+          cashTransactions.forEach(c => {
+            if (new Date(c.date).getTime() <= endOfDayTime) {
+              if (c.type === 'DEPOSIT') dayCashUsd += Number(c.amount);
+              else if (c.type === 'WITHDRAW') dayCashUsd -= Number(c.amount);
+            }
+          });
+
+          const stockSharesMap = {};
+          trades.forEach(t => {
+            if (new Date(t.date).getTime() <= endOfDayTime) {
+              const sym = t.symbol.toUpperCase();
+              if (!stockSharesMap[sym]) stockSharesMap[sym] = 0;
+              const gross = Number(t.shares) * Number(t.price);
+
+              if (t.type === 'BUY') {
+                stockSharesMap[sym] += Number(t.shares);
+                const bFee = calcTossBuyFee(gross);
+                dayCashUsd -= (gross + bFee);
+              } else if (t.type === 'SELL') {
+                stockSharesMap[sym] = Math.max(0, stockSharesMap[sym] - Number(t.shares));
+                const sFee = calcTossSellFee(gross);
+                dayCashUsd += (gross - sFee);
+              }
+            }
+          });
+
+          let dayStockEvalUsd = 0;
+          Object.keys(stockSharesMap).forEach(sym => {
+            const shares = stockSharesMap[sym];
+            if (shares > 0.00001) {
+              const closePrice = getStockCloseOnDate(sym, cur);
+              const rawVal = shares * closePrice;
+              const sellFee = calcTossSellFee(rawVal);
+              dayStockEvalUsd += Math.max(0, rawVal - sellFee);
+            }
+          });
+
+          valuesUsd.push(dayStockEvalUsd + dayCashUsd);
+        }
+
+        cur.setDate(cur.getDate() + 1);
+        cur.setHours(0, 0, 0, 0);
+      }
+
+      return { labels, dates, valuesUsd };
+    }
+
+    function initTrendChart() {
+      const canvas = document.getElementById('trendChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, 160);
+      gradient.addColorStop(0, 'rgba(240, 68, 82, 0.28)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+
+      const dataPack = generateDailyAssetData(selectedPeriodKey);
+      document.getElementById('chartStartDateLabel').textContent = dataPack.dates[0] || '';
+      document.getElementById('chartEndDateLabel').textContent = isAsOfMode() ? `${formatDateKey(getEffectiveCutoffDate())} (기준)` : '오늘';
+
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dataPack.labels,
+          datasets: [{
+            data: dataPack.valuesUsd,
+            dates: dataPack.dates,
+            borderColor: '#f04452',
+            borderWidth: 2.8,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#f04452',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2.5,
+            fill: true,
+            backgroundColor: gradient,
+            tension: 0.25,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: false,
+              external: function(context) {
+                const tooltipEl = document.getElementById('chartCustomTooltip');
+                const tooltipModel = context.tooltip;
+
+                if (tooltipModel.opacity === 0) {
+                  tooltipEl.classList.add('hidden');
+                  return;
+                }
+
+                if (tooltipModel.body && context.chart.data.datasets[0].data.length > 0) {
+                  const index = tooltipModel.dataPoints[0].dataIndex;
+                  const label = context.chart.data.labels[index];
+                  const rawUsd = context.chart.data.datasets[0].data[index];
+
+                  document.getElementById('tooltipDate').textContent = label;
+                  document.getElementById('tooltipValue').textContent = formatMoney(rawUsd);
+                }
+
+                tooltipEl.classList.remove('hidden');
+                tooltipEl.style.left = tooltipModel.caretX + 'px';
+                tooltipEl.style.top = tooltipModel.caretY + 'px';
+              }
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: { display: false }
+          }
+        }
+      });
+    }
+
+    function updateTrendChart() {
+      if (!trendChart) return;
+      const dataPack = generateDailyAssetData(selectedPeriodKey);
+      document.getElementById('chartStartDateLabel').textContent = dataPack.dates[0] || '';
+      document.getElementById('chartEndDateLabel').textContent = isAsOfMode() ? `${formatDateKey(getEffectiveCutoffDate())} (기준)` : '오늘';
+
+      trendChart.data.labels = dataPack.labels;
+      trendChart.data.datasets[0].data = dataPack.valuesUsd;
+      trendChart.data.datasets[0].dates = dataPack.dates;
+      trendChart.update();
+    }
+
+    function selectPeriod(period, btn) {
+      selectedPeriodKey = period;
+      const buttons = btn.parentElement.querySelectorAll('button');
+      buttons.forEach(b => {
+        b.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition";
+      });
+      btn.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition";
+      updateTrendChart();
+    }
+
+    // ===================================================
+    // 10. 도넛 차트 및 포트폴리오 비중
+    // ===================================================
+    function initDoughnutChart() {
+      const ctx = document.getElementById('doughnutChart').getContext('2d');
+      doughnutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            backgroundColor: [
+              '#3182f6', '#f04452', '#ff9f43', '#10b981', '#9b59b6', '#34495e', '#00b894', '#0984e3'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '68%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  const val = ctx.parsed;
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${formatMoney(val)} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateDoughnutChart() {
+      if (!doughnutChart) return;
+      const holdings = computeHoldings();
+      const cashUsd = computeCashUsd();
+
+      const labels = [];
+      const values = [];
+      const legendEl = document.getElementById('doughnutLegend');
+      legendEl.innerHTML = '';
+
+      let totalVal = Math.max(0, cashUsd);
+      holdings.forEach(h => totalVal += h.evalUsd);
+
+      holdings.forEach((h) => {
+        labels.push(h.name);
+        values.push(h.evalUsd);
+      });
+
+      if (cashUsd > 0) {
+        labels.push("달러 예수금");
+        values.push(cashUsd);
+      }
+
+      doughnutChart.data.labels = labels;
+      doughnutChart.data.datasets[0].data = values;
+      doughnutChart.update();
+
+      const colors = ['#3182f6', '#f04452', '#ff9f43', '#10b981', '#9b59b6', '#34495e', '#00b894', '#0984e3'];
+      labels.forEach((name, i) => {
+        const val = values[i];
+        const pct = totalVal > 0 ? ((val / totalVal) * 100).toFixed(1) : 0;
+        const color = colors[i % colors.length];
+
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100";
+        item.innerHTML = `
+          <div class="flex items-center gap-1.5 overflow-hidden">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${color}"></span>
+            <span class="font-bold text-gray-800 truncate">${name}</span>
+          </div>
+          <span class="font-extrabold text-gray-900 shrink-0">${pct}%</span>
+        `;
+        legendEl.appendChild(item);
+      });
+    }
+
+    // ===================================================
+    // 11. 거래 내역 & 입출금 내역 렌더링
+    // ===================================================
+    function handleHistorySearch(val) {
+      historySearchKeyword = val.trim().toLowerCase();
+      document.getElementById('historySearchClearBtn').classList.toggle('hidden', historySearchKeyword === '');
+      renderHistoryLists();
+    }
+
+    function clearHistorySearch() {
+      historySearchKeyword = '';
+      document.getElementById('historySearchInput').value = '';
+      document.getElementById('historySearchClearBtn').classList.add('hidden');
+      renderHistoryLists();
+    }
+
+    function renderHistoryLists() {
+      document.getElementById('tradeCountLabel').textContent = trades.length;
+      document.getElementById('cashCountLabel').textContent = cashTransactions.length;
+
+      const tradeList = document.getElementById('tradeHistoryList');
+      tradeList.innerHTML = '';
+
+      let filteredTrades = [...trades].sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (historySearchKeyword) {
+        filteredTrades = filteredTrades.filter(t => 
+          (t.name && t.name.toLowerCase().includes(historySearchKeyword)) ||
+          (t.symbol && t.symbol.toLowerCase().includes(historySearchKeyword)) ||
+          t.date.includes(historySearchKeyword)
+        );
+      }
+
+      if (filteredTrades.length === 0) {
+        tradeList.innerHTML = `
+          <div class="bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
+            ${historySearchKeyword ? `'${historySearchKeyword}' 검색 결과와 일치하는 거래 내역이 없습니다.` : '등록된 매매 내역이 없습니다.'}
+          </div>
+        `;
+      } else {
+        filteredTrades.forEach(t => {
+          const isBuy = t.type === 'BUY';
+          const badgeClass = isBuy ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500';
+          const typeName = isBuy ? '매수' : '매도';
+          const rawTotalValUsd = Number(t.shares) * Number(t.price);
+          
+          let effectiveAmountUsd = rawTotalValUsd;
+          let feeDetailsText = '';
+
+          if (isBuy) {
+            const buyFee = calcTossBuyFee(rawTotalValUsd);
+            effectiveAmountUsd = rawTotalValUsd + buyFee;
+            feeDetailsText = `정산: $${effectiveAmountUsd.toFixed(2)} (수수료 $${buyFee.toFixed(2)})`;
+          } else {
+            const feePack = calcTossSellFeeComponents(rawTotalValUsd);
+            effectiveAmountUsd = Math.max(0, rawTotalValUsd - feePack.totalFees);
+            feeDetailsText = `정산: $${effectiveAmountUsd.toFixed(2)} (수수료 $${feePack.commission.toFixed(2)}, 세금 $${feePack.secTax.toFixed(2)})`;
+          }
+
+          const item = document.createElement('div');
+          item.className = "bg-white rounded-2xl p-4 shadow-xs border border-gray-100 flex items-center justify-between hover:border-blue-300 active:scale-[0.99] cursor-pointer transition";
+          item.onclick = (e) => {
+            if (!e.target.closest('.delete-btn')) {
+              openEditTradeModal(t.id);
+            }
+          };
+
+          item.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold px-2 py-1 rounded-lg ${badgeClass}">${typeName}</span>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-gray-900 text-sm">${t.name || t.symbol}</span>
+                  <span class="text-[11px] text-gray-400 font-mono">${t.symbol}</span>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-0.5">
+                  ${t.shares}주 · 체결가 $${Number(t.price).toFixed(2)} (${new Date(t.date).toLocaleDateString()})
+                </p>
+                <p class="text-[10px] text-gray-500 font-medium mt-0.5">
+                  ${feeDetailsText}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <div class="text-right">
+                <p class="font-extrabold text-sm text-gray-900">${formatMoney(effectiveAmountUsd)}</p>
+                <p class="text-[10px] text-gray-400 font-medium">$${effectiveAmountUsd.toFixed(2)}</p>
+              </div>
+              
+              <button onclick="quickDeleteTrade('${t.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition active:scale-90" title="삭제">
+                <i class="ph ph-trash text-base"></i>
+              </button>
+            </div>
+          `;
+          tradeList.appendChild(item);
+        });
+      }
+
+      const cashList = document.getElementById('cashHistoryList');
+      cashList.innerHTML = '';
+
+      let filteredCash = [...cashTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (historySearchKeyword) {
+        filteredCash = filteredCash.filter(c => 
+          (c.memo && c.memo.toLowerCase().includes(historySearchKeyword)) ||
+          c.date.includes(historySearchKeyword)
+        );
+      }
+
+      if (filteredCash.length === 0) {
+        cashList.innerHTML = `
+          <div class="bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
+            ${historySearchKeyword ? `'${historySearchKeyword}' 검색 결과와 일치하는 입출금 내역이 없습니다.` : '등록된 입출금 내역이 없습니다.'}
+          </div>
+        `;
+      } else {
+        filteredCash.forEach(c => {
+          const isDeposit = c.type === 'DEPOSIT';
+          const badgeClass = isDeposit ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600';
+          const typeName = isDeposit ? '달러 입금' : '달러 출금';
+          const sign = isDeposit ? '+' : '-';
+
+          const item = document.createElement('div');
+          item.className = "bg-white rounded-2xl p-4 shadow-xs border border-gray-100 flex items-center justify-between hover:border-blue-300 active:scale-[0.99] cursor-pointer transition";
+          item.onclick = (e) => {
+            if (!e.target.closest('.delete-btn')) {
+              openEditCashModal(c.id);
+            }
+          };
+
+          item.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-bold px-2 py-1 rounded-lg ${badgeClass}">${typeName}</span>
+              <div>
+                <p class="font-bold text-gray-900 text-sm">${c.memo || (isDeposit ? 'USD 계좌 입금' : 'USD 계좌 출금')}</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">${new Date(c.date).toLocaleDateString()}</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <div class="text-right">
+                <p class="font-extrabold text-sm ${isDeposit ? 'text-blue-600' : 'text-gray-900'}">${sign}$${Number(c.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <p class="text-[10px] text-gray-400">(${Math.round(c.amount * exchangeRate).toLocaleString()}원)</p>
+              </div>
+
+              <button onclick="quickDeleteCash('${c.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition active:scale-90" title="삭제">
+                <i class="ph ph-trash text-base"></i>
+              </button>
+            </div>
+          `;
+          cashList.appendChild(item);
+        });
+      }
+    }
+
+    function quickDeleteTrade(id) {
+      trades = trades.filter(t => t.id !== id);
+      localStorage.setItem(STORAGE_KEY_TRADES, JSON.stringify(trades));
+      renderAll();
+      updateTrendChart();
+    }
+
+    function quickDeleteCash(id) {
+      cashTransactions = cashTransactions.filter(c => c.id !== id);
+      localStorage.setItem(STORAGE_KEY_CASH, JSON.stringify(cashTransactions));
+      renderAll();
+      updateTrendChart();
+    }
+
+    // ===================================================
+    // 12. 터치 수정 핸들러
+    // ===================================================
+    function openEditTradeModal(id) {
+      const item = trades.find(t => t.id === id);
+      if (!item) return;
+
+      document.getElementById('editTradeId').value = item.id;
+      document.getElementById('tradeModalTitle').textContent = "주식 거래 내역 수정";
+      setTradeType(item.type);
+      document.getElementById('inputTradeSymbol').value = item.symbol;
+      document.getElementById('inputTradeName').value = item.name;
+      document.getElementById('inputTradeShares').value = item.shares;
+      document.getElementById('inputTradePrice').value = item.price;
+      
+      const dt = new Date(item.date);
+      const formattedDt = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      document.getElementById('inputTradeDate').value = formattedDt;
+
+      document.getElementById('btnTradeSubmit').textContent = "수정 완료";
+      document.getElementById('tradeModal').classList.remove('hidden');
+    }
+
+    function openEditCashModal(id) {
+      const item = cashTransactions.find(c => c.id === id);
+      if (!item) return;
+
+      document.getElementById('editCashId').value = item.id;
+      document.getElementById('cashModalTitle').textContent = "달러 입출금 내역 수정";
+      setCashType(item.type);
+      document.getElementById('inputCashAmount').value = item.amount;
+      document.getElementById('inputCashMemo').value = item.memo || '';
+
+      const dt = new Date(item.date);
+      const formattedDt = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      document.getElementById('inputCashDate').value = formattedDt;
+
+      document.getElementById('btnCashSubmit').textContent = "수정 완료";
+      document.getElementById('cashModal').classList.remove('hidden');
+    }
+
+    // ===================================================
+    // 13. 데이터 백업 / 복원
+    // ===================================================
+    function exportToTxtFile() {
+      const backupData = {
+        exportedAt: new Date().toISOString(),
+        version: "2.8",
+        trades: trades,
+        cashTransactions: cashTransactions,
+        exchangeRate: exchangeRate,
+        finnhubKey: finnhubKey,
+        applyHoldingFee: applyHoldingFee,
+        summary: {
+          totalTrades: trades.length,
+          totalCashActions: cashTransactions.length
+        }
+      };
+
+      const jsonStr = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      const nowStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      a.href = url;
+      a.download = `stock_portfolio_backup_${nowStr}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      closeModal('backupModal');
+    }
+
+    function importFromTxtFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed.trades)) {
+            trades = parsed.trades;
+            localStorage.setItem(STORAGE_KEY_TRADES, JSON.stringify(trades));
+          }
+          if (Array.isArray(parsed.cashTransactions)) {
+            cashTransactions = parsed.cashTransactions;
+            localStorage.setItem(STORAGE_KEY_CASH, JSON.stringify(cashTransactions));
+          }
+          if (parsed.exchangeRate) {
+            exchangeRate = Number(parsed.exchangeRate);
+            localStorage.setItem(STORAGE_KEY_RATE, exchangeRate);
+          }
+          if (parsed.finnhubKey) {
+            finnhubKey = parsed.finnhubKey;
+            localStorage.setItem(STORAGE_KEY_API, finnhubKey);
+          }
+          if (typeof parsed.applyHoldingFee === 'boolean') {
+            applyHoldingFee = parsed.applyHoldingFee;
+            localStorage.setItem(STORAGE_KEY_HOLDING_FEE, applyHoldingFee);
+          }
+
+          closeModal('backupModal');
+          updateFeeToggleUI();
+          renderAll();
+          updateTrendChart();
+          fetchAllHistoricalDailyData();
+        } catch (err) {
+          console.error("복원 실패", err);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ===================================================
+    // 14. 모달 및 탭 네비게이션 제어
+    // ===================================================
+    function switchNavTab(tab) {
+      activeNavTab = tab;
+      document.getElementById('viewDashboard').classList.toggle('hidden', tab !== 'dashboard');
+      document.getElementById('viewAnalysis').classList.toggle('hidden', tab !== 'analysis');
+      document.getElementById('viewHistory').classList.toggle('hidden', tab !== 'history');
+
+      const tabs = ['Dashboard', 'Analysis', 'History'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`navTab${t}`);
+        const isActive = t.toLowerCase() === tab;
+        btn.className = isActive 
+          ? "flex-1 py-2 rounded-xl bg-white text-gray-900 shadow-xs transition font-bold"
+          : "flex-1 py-2 rounded-xl hover:text-gray-900 transition font-bold text-gray-500";
+      });
+
+      if (tab === 'analysis') {
+        updateDoughnutChart();
+        renderSaleProfitSection();
+      }
+    }
+
+    function switchHistorySubTab(sub) {
+      activeHistorySubTab = sub;
+      document.getElementById('tradeHistoryList').classList.toggle('hidden', sub !== 'trades');
+      document.getElementById('cashHistoryList').classList.toggle('hidden', sub !== 'cash');
+
+      const btnTrades = document.getElementById('subTabTrades');
+      const btnCash = document.getElementById('subTabCash');
+
+      if (sub === 'trades') {
+        btnTrades.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white";
+        btnCash.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200";
+      } else {
+        btnCash.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white";
+        btnTrades.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200";
+      }
+    }
+
+    function openCurrentActionModal() {
+      if (activeHistorySubTab === 'trades') openTradeModal('BUY');
+      else openCashModal('DEPOSIT');
+    }
+
+    function openTradeModal(type) {
+      setTradeType(type || 'BUY');
+      document.getElementById('editTradeId').value = '';
+      document.getElementById('tradeModalTitle').textContent = "주식 거래 등록";
+      document.getElementById('btnTradeSubmit').textContent = "저장하기";
+      document.getElementById('tradeForm').reset();
+      document.getElementById('inputTradeDate').value = new Date().toISOString().slice(0, 16);
+      document.getElementById('tradeModal').classList.remove('hidden');
+    }
+
+    function setTradeType(type) {
+      currentTradeType = type;
+      const btnBuy = document.getElementById('btnTypeBuy');
+      const btnSell = document.getElementById('btnTypeSell');
+      if (type === 'BUY') {
+        btnBuy.className = "py-2 rounded-lg bg-red-500 text-white shadow-xs font-bold";
+        btnSell.className = "py-2 rounded-lg text-gray-600 font-bold";
+      } else {
+        btnSell.className = "py-2 rounded-lg bg-blue-600 text-white shadow-xs font-bold";
+        btnBuy.className = "py-2 rounded-lg text-gray-600 font-bold";
+      }
+    }
+
+    function openCashModal(type) {
+      setCashType(type || 'DEPOSIT');
+      document.getElementById('editCashId').value = '';
+      document.getElementById('cashModalTitle').textContent = "달러 입출금 등록";
+      document.getElementById('btnCashSubmit').textContent = "저장하기";
+      document.getElementById('cashForm').reset();
+      document.getElementById('inputCashDate').value = new Date().toISOString().slice(0, 16);
+      document.getElementById('cashModal').classList.remove('hidden');
+    }
+
+    function setCashType(type) {
+      currentCashType = type;
+      const btnDep = document.getElementById('btnCashDeposit');
+      const btnWth = document.getElementById('btnCashWithdraw');
+      if (type === 'DEPOSIT') {
+        btnDep.className = "py-2 rounded-lg bg-blue-600 text-white shadow-xs font-bold";
+        btnWth.className = "py-2 rounded-lg text-gray-600 font-bold";
+      } else {
+        btnWth.className = "py-2 rounded-lg bg-gray-700 text-white shadow-xs font-bold";
+        btnDep.className = "py-2 rounded-lg text-gray-600 font-bold";
+      }
+    }
+
+    function openApiKeyModal() {
+      document.getElementById('inputApiKey').value = finnhubKey.startsWith('sandbox_') ? '' : finnhubKey;
+      document.getElementById('apiKeyModal').classList.remove('hidden');
+    }
+
+    function openBackupModal() {
+      document.getElementById('backupModal').classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      const v = document.getElementById('inputApiKey').value.trim();
+      if (v) {
+        finnhubKey = v;
+        localStorage.setItem(STORAGE_KEY_API, v);
+      }
+      closeModal('apiKeyModal');
+      initFinnhubSocket();
+      refreshActualQuotes();
+    }
+
+    // ===================================================
+    // 15. 폼 제출 핸들러
+    // ===================================================
+    async function handleTradeSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editTradeId').value;
+      const sym = document.getElementById('inputTradeSymbol').value.trim().toUpperCase();
+      const name = document.getElementById('inputTradeName').value.trim() || sym;
+      const shares = parseFloat(document.getElementById('inputTradeShares').value);
+      const price = parseFloat(document.getElementById('inputTradePrice').value);
+      const date = document.getElementById('inputTradeDate').value || new Date().toISOString();
+
+      if (editId) {
+        const idx = trades.findIndex(t => t.id === editId);
+        if (idx !== -1) {
+          trades[idx] = {
+            id: editId,
+            type: currentTradeType,
+            symbol: sym,
+            name: name,
+            shares: shares,
+            price: price,
+            date: date
+          };
+        }
+      } else {
+        const newRecord = {
+          id: "trade-" + Date.now(),
+          type: currentTradeType,
+          symbol: sym,
+          name: name,
+          shares: shares,
+          price: price,
+          date: date
+        };
+        trades.push(newRecord);
+      }
+
+      localStorage.setItem(STORAGE_KEY_TRADES, JSON.stringify(trades));
+
+      if (!quotePrices[sym]) {
+        quotePrices[sym] = price;
+        const liveP = await fetchActualRestQuote(sym);
+        if (liveP) quotePrices[sym] = liveP;
+      }
+
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'subscribe', symbol: sym }));
+      }
+
+      closeModal('tradeModal');
+      renderAll();
+      updateTrendChart();
+      fetchAllHistoricalDailyData();
+    }
+
+    function handleCashSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editCashId').value;
+      const amount = parseFloat(document.getElementById('inputCashAmount').value);
+      const memo = document.getElementById('inputCashMemo').value.trim();
+      const date = document.getElementById('inputCashDate').value || new Date().toISOString();
+
+      if (editId) {
+        const idx = cashTransactions.findIndex(c => c.id === editId);
+        if (idx !== -1) {
+          cashTransactions[idx] = {
+            id: editId,
+            type: currentCashType,
+            amount: amount,
+            memo: memo,
+            date: date
+          };
+        }
+      } else {
+        const newCash = {
+          id: "cash-" + Date.now(),
+          type: currentCashType,
+          amount: amount,
+          memo: memo,
+          date: date
+        };
+        cashTransactions.push(newCash);
+      }
+
+      localStorage.setItem(STORAGE_KEY_CASH, JSON.stringify(cashTransactions));
+
+      closeModal('cashModal');
+      renderAll();
+      updateTrendChart();
+    }
+
+    // ===================================================
+    // 16. 전체 렌더링 및 앱 초기 구동
+    // ===================================================
+    function renderAll() {
+      renderDashboardHeader();
+      renderHoldings();
+      renderHistoryLists();
+      if (activeNavTab === 'analysis') {
+        updateDoughnutChart();
+        renderSaleProfitSection();
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('currencyToggleLabel').textContent = displayCurrency === 'KRW' ? 'USD로 보기' : '원화로 보기';
+      document.getElementById('rateLabel').textContent = `${Math.round(exchangeRate).toLocaleString()}원`;
+
+      const todayStr = formatDateKey(new Date());
+      selectedAsOfDate = todayStr;
+      const dateInput = document.getElementById('asOfDateInput');
+      if (dateInput) {
+        dateInput.value = todayStr;
+      }
+
+      updateFeeToggleUI();
+      initTrendChart();
+      initDoughnutChart();
+      renderAll();
+      initFinnhubSocket();
+      refreshActualQuotes();
+      fetchAllHistoricalDailyData();
+    });
+  </script>
+</body>
+</html>
