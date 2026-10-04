@@ -103,7 +103,7 @@
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span>
           연동 ON
         </span>
-        <span id="marketStatusText" class="text-[11px] text-gray-500 font-medium whitespace-nowrap">Finnhub 시세 수신 중</span>
+        <span id="marketStatusText" class="text-[11px] text-gray-500 font-medium whitespace-nowrap">시세 수신 중</span>
       </div>
       <button onclick="promptExchangeRate()" class="flex items-center gap-1 hover:text-blue-600 font-semibold text-gray-600 transition whitespace-nowrap">
         <span>적용 환율:</span>
@@ -334,7 +334,7 @@
       <div id="cashHistoryList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pb-6 hidden"></div>
     </section>
 
-    <!-- [모달들] 생략 없이 원본 구성 보장 -->
+    <!-- 모달 창들 -->
     <div id="tradeModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
       <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center">
@@ -349,11 +349,11 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">티커 심볼 (Ticker)</label>
-            <input id="inputTradeSymbol" type="text" placeholder="예: AAPL, OKLO, NVDA" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 uppercase font-mono font-bold text-gray-800 outline-none focus:border-blue-500">
+            <input id="inputTradeSymbol" type="text" placeholder="예: AAPL, OKLO" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 uppercase font-mono font-bold text-gray-800 outline-none focus:border-blue-500">
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">종목 표시명</label>
-            <input id="inputTradeName" type="text" placeholder="예: 애플, 오클로, 엔비디아" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-800 outline-none focus:border-blue-500">
+            <input id="inputTradeName" type="text" placeholder="예: 애플, 오클로" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-800 outline-none focus:border-blue-500">
           </div>
           <div class="grid grid-cols-2 gap-2.5">
             <div>
@@ -429,13 +429,13 @@
     <div id="apiKeyModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
       <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center">
-          <h4 class="text-lg font-bold text-gray-900">Finnhub API 설정</h4>
+          <h4 class="text-lg font-bold text-gray-900">API 설정</h4>
           <button onclick="closeModal('apiKeyModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1"><i class="ph ph-x"></i></button>
         </div>
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">API Token</label>
-            <input id="inputApiKey" type="text" placeholder="Finnhub API Key" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 outline-none focus:border-blue-500">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">API Token (Finnhub)</label>
+            <input id="inputApiKey" type="text" placeholder="API Key 입력" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 outline-none focus:border-blue-500">
           </div>
           <button onclick="saveApiKey()" class="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">저장 및 연결</button>
         </div>
@@ -452,8 +452,6 @@
     const STORAGE_KEY_CURRENCY = "DISPLAY_CURRENCY";
     const STORAGE_KEY_HOLDING_FEE = "APPLY_HOLDING_FEE_MODE";
     const STORAGE_KEY_HISTORICAL_CACHE = "HISTORICAL_PRICE_CACHE_V1";
-
-    const CUTOFF_DATE_STR = "2026-10-04";
 
     let finnhubKey = localStorage.getItem(STORAGE_KEY_API) || 'sandbox_c0123456789';
     let exchangeRate = parseFloat(localStorage.getItem(STORAGE_KEY_RATE)) || 1347.0;
@@ -478,7 +476,7 @@
       { id: "cash-1", type: "DEPOSIT", amount: 25000.00, memo: "초기 달러 예수금", date: "2024-01-01T09:00:00" }
     ];
 
-    let quotePrices = { "OKLO": 150.00, "AAPL": 122.07 };
+    let quotePrices = { "OKLO": 150.00, "AAPL": 220.00, "NVDA": 120.00, "TSLA": 240.00 };
     let historicalPriceCache = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORICAL_CACHE)) || {};
 
     let socket = null;
@@ -500,7 +498,7 @@
       const cleanCache = {};
       Object.keys(rawCache).forEach(sym => {
         const uppercaseSym = sym.toUpperCase();
-        cleanCache[uppercaseSym] = cleanCache[uppercaseSym] || {};
+        cleanCache[uppercaseSym] = {};
         const datesMap = rawCache[sym];
         if (datesMap && typeof datesMap === 'object') {
           Object.keys(datesMap).forEach(dKey => {
@@ -515,7 +513,7 @@
       return cleanCache;
     }
 
-    // 🔥 GitHub Actions에서 자동 업데이트되는 JSON 불러오기 로직 추가
+    // 깃허브 액션으로 자동 생성되는 historical_prices.json 연동 (실패 시 로컬 계산/캐시 사용)
     async function loadRemoteHistoricalPrices() {
       try {
         const res = await fetch('./historical_prices.json');
@@ -527,13 +525,13 @@
               ...remoteCache
             });
             localStorage.setItem(STORAGE_KEY_HISTORICAL_CACHE, JSON.stringify(historicalPriceCache));
-            renderAll();
-            updateTrendChart();
           }
         }
       } catch (e) {
-        console.log("로컬 서버이거나 원본 JSON 파일이 제공되지 않았습니다.");
+        console.log("외부 JSON 파일 연동 대기 중 (오프라인/로컬 모드)");
       }
+      renderAll();
+      updateTrendChart();
     }
 
     function getEffectiveCutoffDate() {
@@ -612,7 +610,7 @@
 
       sortedTrades.forEach(t => {
         const sym = t.symbol.toUpperCase();
-        if (!map[sym]) map[sym] = { symbol: sym, name: t.name || sym, shares: 0, totalCostUsd: 0, firstDate: t.date };
+        if (!map[sym]) map[sym] = { symbol: sym, name: t.name || sym, shares: 0, totalCostUsd: 0 };
         const gross = Number(t.shares) * Number(t.price);
 
         if (t.type === 'BUY') {
@@ -682,7 +680,7 @@
           const profitUsd = netProceeds - costBasis;
           const profitRate = costBasis > 0 ? (profitUsd / costBasis) * 100 : 0;
 
-          sales.push({ id: t.id, symbol: sym, name: t.name || sym, shares: sellShares, price: Number(t.price), date: t.date, grossUsd: gross, commission: feePack.commission, secTax: feePack.secTax, totalFee: feePack.totalFees, netProceeds, costBasis, profitUsd, profitRate });
+          sales.push({ id: t.id, symbol: sym, name: t.name || sym, shares: sellShares, price: Number(t.price), date: t.date, netProceeds, costBasis, profitUsd, profitRate });
 
           pool[sym].shares = Math.max(0, prevShares - sellShares);
           pool[sym].costUsd = Math.max(0, pool[sym].shares * avgCostPerShare);
@@ -784,42 +782,23 @@
 
       filteredSales.slice().reverse().forEach(s => {
         const itemUp = s.profitUsd >= 0;
-        const itemSign = itemUp ? '+' : '';
         const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-blue-50/40 cursor-pointer transition flex-wrap sm:flex-nowrap gap-2";
+        row.className = "flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-blue-50/40 cursor-pointer transition gap-2";
         row.onclick = () => openEditTradeModal(s.id);
         row.innerHTML = `
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-9 h-9 rounded-xl bg-blue-100/60 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">${s.symbol.slice(0, 2)}</div>
             <div class="min-w-0">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="font-bold text-gray-900 text-xs truncate">${s.name}</span>
-                <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap">${s.symbol}</span>
-              </div>
-              <p class="text-[11px] text-gray-500 mt-0.5 font-medium whitespace-nowrap">${s.shares}주 매도 · 체결단가 $${s.price.toFixed(2)}</p>
+              <span class="font-bold text-gray-900 text-xs truncate">${s.name}</span>
+              <p class="text-[11px] text-gray-500 mt-0.5">${s.shares}주 매도 · 단가 $${s.price.toFixed(2)}</p>
             </div>
           </div>
           <div class="text-right shrink-0">
-            <p class="font-extrabold text-xs ${itemUp ? 'color-up' : 'color-down'} whitespace-nowrap">${itemSign}${formatMoney(s.profitUsd)}</p>
-            <span class="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md ${itemUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]'} mt-0.5 whitespace-nowrap">${itemSign}${s.profitRate.toFixed(2)}%</span>
+            <p class="font-extrabold text-xs ${itemUp ? 'color-up' : 'color-down'}">${itemUp ? '+' : ''}${formatMoney(s.profitUsd)}</p>
           </div>
         `;
         listEl.appendChild(row);
       });
-    }
-
-    function setWsStatusUI(isOn, text) {
-      const badge = document.getElementById("wsStatusBadge");
-      const statusText = document.getElementById("marketStatusText");
-      if (isOn) {
-        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 whitespace-nowrap";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span>연동 ON`;
-        statusText.textContent = text || "Finnhub 실시간 시세 수신 중";
-      } else {
-        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 whitespace-nowrap";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1"></span>연동 OFF`;
-        statusText.textContent = text || "실시간 수신 대기";
-      }
     }
 
     function initFinnhubSocket() {
@@ -827,42 +806,32 @@
       try {
         socket = new WebSocket(`wss://ws.finnhub.io?token=${finnhubKey}`);
         socket.onopen = () => {
-          setWsStatusUI(true, "Finnhub 실시간 체결 웹소켓 연결됨");
           computeHoldings().forEach(h => socket.send(JSON.stringify({ type: 'subscribe', symbol: h.symbol })));
         };
         socket.onmessage = (e) => {
           const res = JSON.parse(e.data);
           if (res.type === 'trade' && Array.isArray(res.data)) {
-            res.data.forEach(t => {
-              if (t.s && t.p > 0) quotePrices[t.s] = Number(t.p);
-            });
+            res.data.forEach(t => { if (t.s && t.p > 0) quotePrices[t.s] = Number(t.p); });
             renderAll();
             updateTrendChart();
           }
         };
-        socket.onerror = () => setWsStatusUI(false, "웹소켓 연결 장애 (REST 모드)");
-        socket.onclose = () => setWsStatusUI(false, "웹소켓 연결 종료");
-      } catch (err) { setWsStatusUI(false, "연동 불가"); }
-    }
-
-    async function fetchActualRestQuote(symbol) {
-      try {
-        const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.c > 0) return Number(data.c);
-        }
-      } catch (e) {}
-      return null;
+      } catch (err) {}
     }
 
     async function refreshActualQuotes() {
       const holdings = computeHoldings();
       await Promise.all(holdings.map(async (h) => {
-        const p = await fetchActualRestQuote(h.symbol);
-        if (p) quotePrices[h.symbol] = p;
+        try {
+          const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${h.symbol}&token=${finnhubKey}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.c > 0) quotePrices[h.symbol] = Number(data.c);
+          }
+        } catch (e) {}
       }));
       renderAll();
+      updateTrendChart();
     }
 
     function formatMoney(usdAmount, isKrwForce = false) {
@@ -891,10 +860,10 @@
     function updateFeeToggleUI() {
       const btn = document.getElementById('feeToggleBtn');
       if (applyHoldingFee) {
-        btn.className = "flex items-center gap-1 bg-blue-50 border border-blue-400 px-2 py-1 rounded-full text-[11px] font-extrabold text-blue-700 shadow-xs active:scale-95 transition whitespace-nowrap";
+        btn.className = "flex items-center gap-1 bg-blue-50 border border-blue-400 px-2 py-1 rounded-full text-[11px] font-extrabold text-blue-700 shadow-xs transition whitespace-nowrap";
         btn.innerHTML = `<i class="ph ph-check-bold text-xs text-blue-600"></i><span>수수료 ON</span>`;
       } else {
-        btn.className = "flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition whitespace-nowrap";
+        btn.className = "flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs transition whitespace-nowrap";
         btn.innerHTML = `<i class="ph ph-receipt text-xs"></i><span>수수료 OFF</span>`;
       }
     }
@@ -976,11 +945,7 @@
       container.innerHTML = '';
 
       if (holdings.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100">
-            <p class="text-sm font-semibold text-gray-500">보유 중인 주식이 없습니다.</p>
-          </div>
-        `;
+        container.innerHTML = `<div class="col-span-full bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100"><p class="text-sm font-semibold text-gray-500">보유 중인 주식이 없습니다.</p></div>`;
         return;
       }
 
@@ -993,24 +958,21 @@
         card.className = "bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-gray-100 flex items-center justify-between gap-2";
         card.innerHTML = `
           <div class="flex items-center gap-3 min-w-0">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50 border border-blue-100 text-blue-600 flex items-center justify-center text-lg sm:text-xl font-black shrink-0">
-              ${stock.symbol.slice(0, 2)}
-            </div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50 border border-blue-100 text-blue-600 flex items-center justify-center font-black shrink-0">${stock.symbol.slice(0, 2)}</div>
             <div class="min-w-0">
               <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="font-bold text-gray-900 text-sm sm:text-base leading-tight truncate">${stock.name}</span>
-                <span class="text-[10px] sm:text-[11px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded whitespace-nowrap">${stock.symbol}</span>
+                <span class="font-bold text-gray-900 text-sm sm:text-base truncate">${stock.name}</span>
+                <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">${stock.symbol}</span>
               </div>
-              <p class="text-xs text-gray-400 mt-1 font-medium whitespace-nowrap">${stock.shares.toLocaleString()}주 · 평단 $${stock.avgPrice.toFixed(2)}</p>
-              <p class="text-xs text-gray-500 font-semibold mt-0.5 whitespace-nowrap">${isAsOfMode() ? '기준가' : '현재가'} <span class="font-bold text-gray-800">$${stock.currentPrice.toFixed(2)}</span></p>
+              <p class="text-xs text-gray-400 mt-1">${stock.shares.toLocaleString()}주 · 평단 $${stock.avgPrice.toFixed(2)}</p>
+              <p class="text-xs text-gray-500 font-semibold mt-0.5">${isAsOfMode() ? '기준가' : '현재가'} <span class="text-gray-800">$${stock.currentPrice.toFixed(2)}</span></p>
             </div>
           </div>
-
           <div class="text-right shrink-0">
-            <p class="font-extrabold text-base sm:text-[17px] text-gray-900 whitespace-nowrap">${formatMoney(stock.evalUsd)}</p>
+            <p class="font-extrabold text-base sm:text-[17px] text-gray-900">${formatMoney(stock.evalUsd)}</p>
             <div class="flex items-center justify-end gap-1.5 mt-1">
-              <span class="text-xs font-extrabold ${isUp ? 'color-up' : 'color-down'} whitespace-nowrap">${sign}${formatMoney(stock.profitUsd)}</span>
-              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-md ${isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]'} whitespace-nowrap">${sign}${stock.profitRate.toFixed(2)}%</span>
+              <span class="text-xs font-extrabold ${isUp ? 'color-up' : 'color-down'}">${sign}${formatMoney(stock.profitUsd)}</span>
+              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-md ${isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]'}">${sign}${stock.profitRate.toFixed(2)}%</span>
             </div>
           </div>
         `;
@@ -1020,6 +982,7 @@
 
     let selectedPeriodKey = '1M';
 
+    // 🔥 일별 종가 정확 조회 엔진 (캐시 ➔ 거래 체결가 ➔ 기본값 순서로 안전 보장)
     function getStockCloseOnDate(symbol, targetDate) {
       const uppercaseSym = symbol.toUpperCase();
       const cache = historicalPriceCache[uppercaseSym] || {};
@@ -1033,11 +996,13 @@
         return Number(cache[key]);
       }
 
+      // 가장 가까운 과거 종가 탐색
       const sortedKeys = Object.keys(cache).filter(k => k <= key).sort((a, b) => (a > b ? -1 : 1));
       if (sortedKeys.length > 0) {
         return Number(cache[sortedKeys[0]]);
       }
 
+      // 캐시가 없으면 당시 체결가 활용
       const targetTime = new Date(targetDate).setHours(23, 59, 59, 999);
       const pastTrades = trades.filter(t => t.symbol.toUpperCase() === uppercaseSym && new Date(t.date).getTime() <= targetTime).sort((a, b) => new Date(b.date) - new Date(a.date));
       if (pastTrades.length > 0) return Number(pastTrades[0].price);
@@ -1109,7 +1074,8 @@
             }
           });
 
-          valuesUsd.push(dayStockEvalUsd + dayCashUsd);
+          const convertedVal = displayCurrency === 'KRW' ? (dayStockEvalUsd + dayCashUsd) * exchangeRate : (dayStockEvalUsd + dayCashUsd);
+          valuesUsd.push(convertedVal);
         }
         cur.setDate(cur.getDate() + 1);
         cur.setHours(0, 0, 0, 0);
@@ -1160,7 +1126,8 @@
                 if (tooltipModel.body && context.chart.data.datasets[0].data.length > 0) {
                   const idx = tooltipModel.dataPoints[0].dataIndex;
                   document.getElementById('tooltipDate').textContent = context.chart.data.datasets[0].dates[idx];
-                  document.getElementById('tooltipValue').textContent = formatMoney(context.chart.data.datasets[0].data[idx]);
+                  const rawVal = context.chart.data.datasets[0].data[idx];
+                  document.getElementById('tooltipValue').textContent = displayCurrency === 'KRW' ? `${Math.round(rawVal).toLocaleString()}원` : `$${rawVal.toFixed(2)}`;
                 }
                 tooltipEl.classList.remove('hidden');
                 tooltipEl.style.left = tooltipModel.caretX + 'px';
@@ -1276,13 +1243,11 @@
               <span class="text-xs font-bold px-2 py-1 rounded-lg ${isBuy ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'} shrink-0">${isBuy ? '매수' : '매도'}</span>
               <div class="min-w-0">
                 <span class="font-bold text-gray-900 text-sm truncate">${t.name || t.symbol}</span>
-                <p class="text-[11px] text-gray-400 mt-0.5">${t.shares}주 · 체결가 $${Number(t.price).toFixed(2)}</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">${t.shares}주 · 단가 $${Number(t.price).toFixed(2)}</p>
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <div class="text-right">
-                <p class="font-extrabold text-sm text-gray-900">${formatMoney(effectiveAmountUsd)}</p>
-              </div>
+              <p class="font-extrabold text-sm text-gray-900">${formatMoney(effectiveAmountUsd)}</p>
               <button onclick="quickDeleteTrade('${t.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition shrink-0"><i class="ph ph-trash"></i></button>
             </div>
           `;
@@ -1576,8 +1541,7 @@
       initDoughnutChart();
       renderAll();
       initFinnhubSocket();
-      refreshActualQuotes();
-      loadRemoteHistoricalPrices(); // 🔥 깃허브 자동 수집 데이터 연동
+      loadRemoteHistoricalPrices();
     });
   </script>
 </body>
