@@ -1058,7 +1058,6 @@
         socket = new WebSocket(`wss://ws.finnhub.io?token=${finnhubKey}`);
 
         socket.onopen = () => {
-          setWsStatusUI(true, "Finnhub 실시간 체결 웹소켓 연결됨");
           
           const holdings = computeHoldings();
           holdings.forEach(h => {
@@ -1324,7 +1323,7 @@
     }
 
     // ===================================================
-    // 9. 일별 종가 및 자산 추이 차트 엔진 (오늘 시세 우선 보정 적용)
+    // 9. 일별 종가 및 자산 추이 차트 엔진 (20220605~20261003 종가는 백업 파일에서만 로드)
     // ===================================================
     let selectedPeriodKey = '1M';
 
@@ -1335,112 +1334,9 @@
       return `${y}-${m}-${d}`;
     }
 
-    // 외부 Fetch 타임아웃 헬퍼
-    async function fetchWithTimeout(resource, options = {}) {
-      const { timeout = 3500 } = options;
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
-      try {
-        const response = await fetch(resource, {
-          ...options,
-          signal: controller.signal
-        });
-        clearTimeout(id);
-        return response;
-      } catch (error) {
-        clearTimeout(id);
-        throw error;
-      }
-    }
-
-    async function fetchSingleSymbolHistory(sym, fromTime, toTime) {
-      if (!historicalPriceCache[sym]) historicalPriceCache[sym] = {};
-
-      const todayKey = formatDateKey(new Date());
-      if (quotePrices[sym] && !historicalPriceCache[sym][todayKey]) {
-        historicalPriceCache[sym][todayKey] = quotePrices[sym];
-      }
-
-      let cachedDaysCount = 0;
-      const testDate = new Date();
-      for (let i = 0; i < 90; i++) {
-        const k = formatDateKey(testDate);
-        if (historicalPriceCache[sym][k] !== undefined) {
-          cachedDaysCount++;
-        }
-        testDate.setDate(testDate.getDate() - 1);
-      }
-
-      if (cachedDaysCount >= 45) return false;
-
-      let fetched = false;
-
-      // 1. Finnhub API 우선 수신
-      if (finnhubKey && !finnhubKey.startsWith('sandbox_')) {
-        try {
-          const fhUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${sym}&resolution=D&from=${fromTime}&to=${toTime}&token=${finnhubKey}`;
-          const res = await fetchWithTimeout(fhUrl, { timeout: 3000 });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.s === 'ok' && Array.isArray(data.c) && Array.isArray(data.t)) {
-              data.t.forEach((ts, idx) => {
-                const dk = formatDateKey(new Date(ts * 1000));
-                const closeVal = Number(data.c[idx]);
-                if (!isNaN(closeVal) && closeVal > 0) {
-                  historicalPriceCache[sym][dk] = closeVal;
-                }
-              });
-              fetched = true;
-            }
-          }
-        } catch (e) {}
-      }
-
-      // 2. Yahoo Finance 보조 수신 (CORS 프록시)
-      if (!fetched) {
-        try {
-          const yahooTarget = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=6mo&interval=1d`;
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooTarget)}`;
-          const res = await fetchWithTimeout(proxyUrl, { timeout: 3500 });
-          if (res.ok) {
-            const data = await res.json();
-            const result = data?.chart?.result?.[0];
-            if (result && result.timestamp && result.indicators?.quote?.[0]?.close) {
-              const timestamps = result.timestamp;
-              const closes = result.indicators.quote[0].close;
-              timestamps.forEach((ts, idx) => {
-                const closeVal = closes[idx];
-                if (closeVal !== null && closeVal !== undefined && !isNaN(closeVal)) {
-                  const dk = formatDateKey(new Date(ts * 1000));
-                  historicalPriceCache[sym][dk] = Number(closeVal);
-                }
-              });
-              fetched = true;
-            }
-          }
-        } catch (e) {}
-      }
-
-      return fetched;
-    }
-
     async function fetchAllHistoricalDailyData() {
-      const symbols = Array.from(new Set(trades.map(t => t.symbol.toUpperCase())));
-      if (symbols.length === 0) return;
-
-      const toTime = Math.floor(Date.now() / 1000);
-      const fromTime = toTime - (220 * 24 * 3600);
-
-      const results = await Promise.all(
-        symbols.map(sym => fetchSingleSymbolHistory(sym, fromTime, toTime))
-      );
-
-      const needSaveCache = results.some(updated => updated === true);
-
-      if (needSaveCache) {
-        localStorage.setItem(STORAGE_KEY_HISTORICAL_CACHE, JSON.stringify(historicalPriceCache));
-      }
-
+      // 20220605~20261003 기간 일별 종가는 백업 파일(historicalPriceCache)로만 불러오며
+      // 외부 API 호출은 수행하지 않습니다.
       updateTrendChart();
     }
 
@@ -1449,11 +1345,12 @@
       const key = formatDateKey(targetDate);
       const todayKey = formatDateKey(new Date());
 
-      // 🔥 오늘 날짜인 경우, 캐시/과거 체결가보다 웹소켓 및 최근 수신 실시간가를 최우선 반영
+      // 🔥 오늘 날짜인 경우, 실시간가 최우선 반영
       if (key === todayKey && quotePrices[symbol] !== undefined) {
         return quotePrices[symbol];
       }
 
+      // 20220605~20261003 일별 종가 포함 백업 파일 캐시 우선 조회
       if (cache[key] !== undefined) {
         return cache[key];
       }
