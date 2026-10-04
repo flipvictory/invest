@@ -187,6 +187,13 @@
 
         <!-- 1-2. 일별 자산 추이 인터랙티브 차트 카드 -->
         <section class="lg:col-span-7 bg-white rounded-3xl p-5 shadow-xs border border-gray-100 relative flex flex-col justify-between">
+          
+          <!-- 차트 종류 전환 토글 버튼 -->
+          <div class="flex bg-gray-200/80 p-1 rounded-2xl mb-2 text-xs font-bold text-gray-500">
+            <button id="chartTypeActual" class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap" onclick="switchChartType('ACTUAL')">일별 실시간 추세</button>
+            <button id="chartTypeConstant" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="switchChartType('CONSTANT')">전체 입금 대비 (고정 원금)</button>
+          </div>
+
           <div class="flex bg-gray-100/90 p-1 rounded-2xl mb-3 text-xs font-bold text-gray-500">
             <button class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap" onclick="selectPeriod('1M', this)">1개월</button>
             <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="selectPeriod('3M', this)">3개월</button>
@@ -212,7 +219,7 @@
               </div>
               <div class="flex items-center gap-1.5 text-gray-500">
                 <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                <span>원금 추세</span>
+                <span id="chartCostLegendLabel">원금 추세</span>
               </div>
             </div>
             <span id="chartEndDateLabel" class="whitespace-nowrap">오늘</span>
@@ -610,6 +617,8 @@
     let saleCurrentAnchorDate = new Date();
     let saleSearchKeyword = '';
     let historySearchKeyword = '';
+
+    let chartMode = 'ACTUAL'; // 'ACTUAL' | 'CONSTANT'
 
     let trades = JSON.parse(localStorage.getItem(STORAGE_KEY_TRADES)) || [
       {
@@ -1226,6 +1235,25 @@
       updateTrendChart();
     }
 
+    function switchChartType(type) {
+      chartMode = type;
+      const btnActual = document.getElementById('chartTypeActual');
+      const btnConstant = document.getElementById('chartTypeConstant');
+      const costLegendLabel = document.getElementById('chartCostLegendLabel');
+
+      if (type === 'ACTUAL') {
+        btnActual.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap";
+        btnConstant.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap";
+        if (costLegendLabel) costLegendLabel.textContent = "원금 추세";
+      } else {
+        btnConstant.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap";
+        btnActual.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap";
+        if (costLegendLabel) costLegendLabel.textContent = "전체 고정 원금";
+      }
+
+      updateTrendChart();
+    }
+
     function toggleFeeMode() {
       applyHoldingFee = !applyHoldingFee;
       localStorage.setItem(STORAGE_KEY_HOLDING_FEE, applyHoldingFee);
@@ -1576,6 +1604,18 @@
       return quotePrices[symbol] || 100.0;
     }
 
+    function calculateTotalConstantDepositUsd() {
+      let total = 0;
+      const cutoffTime = getEffectiveCutoffDate().getTime();
+      cashTransactions.forEach(c => {
+        if (new Date(c.date).getTime() <= cutoffTime) {
+          if (c.type === 'DEPOSIT') total += Number(c.amount);
+          else if (c.type === 'WITHDRAW') total -= Number(c.amount);
+        }
+      });
+      return total;
+    }
+
     function generateDailyAssetData(periodKey) {
       const effectiveEndDate = getEffectiveCutoffDate();
       const todayYear = effectiveEndDate.getFullYear();
@@ -1613,6 +1653,8 @@
       const valuesUsd = [];
       const costUsd = [];
 
+      const totalConstantDepositUsd = calculateTotalConstantDepositUsd();
+
       const processedDays = new Set();
       const cur = new Date(startDate.getTime());
       const endBoundary = new Date(todayYear, todayMonth, todayDate, 23, 59, 59, 999);
@@ -1630,66 +1672,118 @@
           labels.push(`${m}/${d}`);
           dates.push(`${cur.getFullYear()}.${m}.${d}`);
 
-          let dayCashUsd = 0;
-          let netDepositUsd = 0;
-          cashTransactions.forEach(c => {
-            if (new Date(c.date).getTime() <= endOfDayTime) {
-              if (c.type === 'DEPOSIT') {
-                dayCashUsd += Number(c.amount);
-                netDepositUsd += Number(c.amount);
-              } else if (c.type === 'WITHDRAW') {
-                dayCashUsd -= Number(c.amount);
-                netDepositUsd -= Number(c.amount);
-              }
-            }
-          });
+          if (chartMode === 'CONSTANT') {
+            let dayCashUsd = totalConstantDepositUsd;
 
-          const stockSharesMap = {};
-          const buyFeeMap = {};
+            const stockSharesMap = {};
+            const buyFeeMap = {};
 
-          trades.forEach(t => {
-            if (new Date(t.date).getTime() <= endOfDayTime) {
-              const sym = t.symbol.toUpperCase();
-              if (!stockSharesMap[sym]) stockSharesMap[sym] = 0;
-              if (!buyFeeMap[sym]) buyFeeMap[sym] = 0;
+            trades.forEach(t => {
+              if (new Date(t.date).getTime() <= endOfDayTime) {
+                const sym = t.symbol.toUpperCase();
+                if (!stockSharesMap[sym]) stockSharesMap[sym] = 0;
+                if (!buyFeeMap[sym]) buyFeeMap[sym] = 0;
 
-              const gross = Number(t.shares) * Number(t.price);
+                const gross = Number(t.shares) * Number(t.price);
 
-              if (t.type === 'BUY') {
-                stockSharesMap[sym] += Number(t.shares);
-                const bFee = calcTossBuyFee(gross);
-                buyFeeMap[sym] += bFee;
-                dayCashUsd -= (gross + bFee);
-              } else if (t.type === 'SELL') {
-                const prevShares = stockSharesMap[sym];
-                const sellShares = Number(t.shares);
-                if (prevShares > 0) {
-                  const ratio = Math.max(0, prevShares - sellShares) / prevShares;
-                  buyFeeMap[sym] *= ratio;
-                  stockSharesMap[sym] = Math.max(0, prevShares - sellShares);
+                if (t.type === 'BUY') {
+                  stockSharesMap[sym] += Number(t.shares);
+                  const bFee = calcTossBuyFee(gross);
+                  buyFeeMap[sym] += bFee;
+                  dayCashUsd -= (gross + bFee);
+                } else if (t.type === 'SELL') {
+                  const prevShares = stockSharesMap[sym];
+                  const sellShares = Number(t.shares);
+                  if (prevShares > 0) {
+                    const ratio = Math.max(0, prevShares - sellShares) / prevShares;
+                    buyFeeMap[sym] *= ratio;
+                    stockSharesMap[sym] = Math.max(0, prevShares - sellShares);
+                  }
+                  const sFee = calcTossSellFee(gross);
+                  dayCashUsd += (gross - sFee);
                 }
-                const sFee = calcTossSellFee(gross);
-                dayCashUsd += (gross - sFee);
               }
-            }
-          });
+            });
 
-          let dayStockEvalUsd = 0;
-          Object.keys(stockSharesMap).forEach(sym => {
-            const shares = stockSharesMap[sym];
-            if (shares > 0.00001) {
-              const closePrice = getStockCloseOnDate(sym, cur);
-              const rawVal = shares * closePrice;
-              let totalImmediateFees = 0;
-              if (applyHoldingFee) {
-                totalImmediateFees = (buyFeeMap[sym] || 0) + calcTossSellFee(rawVal);
+            let dayStockEvalUsd = 0;
+            Object.keys(stockSharesMap).forEach(sym => {
+              const shares = stockSharesMap[sym];
+              if (shares > 0.00001) {
+                const closePrice = getStockCloseOnDate(sym, cur);
+                const rawVal = shares * closePrice;
+                let totalImmediateFees = 0;
+                if (applyHoldingFee) {
+                  totalImmediateFees = (buyFeeMap[sym] || 0) + calcTossSellFee(rawVal);
+                }
+                dayStockEvalUsd += Math.max(0, rawVal - totalImmediateFees);
               }
-              dayStockEvalUsd += Math.max(0, rawVal - totalImmediateFees);
-            }
-          });
+            });
 
-          valuesUsd.push(dayStockEvalUsd + dayCashUsd);
-          costUsd.push(netDepositUsd);
+            valuesUsd.push(dayStockEvalUsd + dayCashUsd);
+            costUsd.push(totalConstantDepositUsd);
+
+          } else {
+            let dayCashUsd = 0;
+            let netDepositUsd = 0;
+            cashTransactions.forEach(c => {
+              if (new Date(c.date).getTime() <= endOfDayTime) {
+                if (c.type === 'DEPOSIT') {
+                  dayCashUsd += Number(c.amount);
+                  netDepositUsd += Number(c.amount);
+                } else if (c.type === 'WITHDRAW') {
+                  dayCashUsd -= Number(c.amount);
+                  netDepositUsd -= Number(c.amount);
+                }
+              }
+            });
+
+            const stockSharesMap = {};
+            const buyFeeMap = {};
+
+            trades.forEach(t => {
+              if (new Date(t.date).getTime() <= endOfDayTime) {
+                const sym = t.symbol.toUpperCase();
+                if (!stockSharesMap[sym]) stockSharesMap[sym] = 0;
+                if (!buyFeeMap[sym]) buyFeeMap[sym] = 0;
+
+                const gross = Number(t.shares) * Number(t.price);
+
+                if (t.type === 'BUY') {
+                  stockSharesMap[sym] += Number(t.shares);
+                  const bFee = calcTossBuyFee(gross);
+                  buyFeeMap[sym] += bFee;
+                  dayCashUsd -= (gross + bFee);
+                } else if (t.type === 'SELL') {
+                  const prevShares = stockSharesMap[sym];
+                  const sellShares = Number(t.shares);
+                  if (prevShares > 0) {
+                    const ratio = Math.max(0, prevShares - sellShares) / prevShares;
+                    buyFeeMap[sym] *= ratio;
+                    stockSharesMap[sym] = Math.max(0, prevShares - sellShares);
+                  }
+                  const sFee = calcTossSellFee(gross);
+                  dayCashUsd += (gross - sFee);
+                }
+              }
+            });
+
+            let dayStockEvalUsd = 0;
+            Object.keys(stockSharesMap).forEach(sym => {
+              const shares = stockSharesMap[sym];
+              if (shares > 0.00001) {
+                const closePrice = getStockCloseOnDate(sym, cur);
+                const rawVal = shares * closePrice;
+                let totalImmediateFees = 0;
+                if (applyHoldingFee) {
+                  totalImmediateFees = (buyFeeMap[sym] || 0) + calcTossSellFee(rawVal);
+                }
+                dayStockEvalUsd += Math.max(0, rawVal - totalImmediateFees);
+              }
+            });
+
+            valuesUsd.push(dayStockEvalUsd + dayCashUsd);
+            costUsd.push(netDepositUsd);
+          }
         }
 
         cur.setDate(cur.getDate() + 1);
