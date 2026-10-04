@@ -1324,7 +1324,7 @@
     }
 
     // ===================================================
-    // 9. 일별 종가 및 자산 추이 차트 엔진 (병렬화 최적화)
+    // 9. 일별 종가 및 자산 추이 차트 엔진 (오늘 시세 우선 보정 적용)
     // ===================================================
     let selectedPeriodKey = '1M';
 
@@ -1431,7 +1431,6 @@
       const toTime = Math.floor(Date.now() / 1000);
       const fromTime = toTime - (220 * 24 * 3600);
 
-      // 모든 종목 동시 병렬 요청 처리 (Parallel Processing)
       const results = await Promise.all(
         symbols.map(sym => fetchSingleSymbolHistory(sym, fromTime, toTime))
       );
@@ -1448,6 +1447,12 @@
     function getStockCloseOnDate(symbol, targetDate) {
       const cache = historicalPriceCache[symbol] || {};
       const key = formatDateKey(targetDate);
+      const todayKey = formatDateKey(new Date());
+
+      // 🔥 오늘 날짜인 경우, 캐시/과거 체결가보다 웹소켓 및 최근 수신 실시간가를 최우선 반영
+      if (key === todayKey && quotePrices[symbol] !== undefined) {
+        return quotePrices[symbol];
+      }
 
       if (cache[key] !== undefined) {
         return cache[key];
