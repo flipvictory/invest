@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>내 주식·자산 대시보드</title>
@@ -20,9 +17,12 @@
     * {
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
       -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
     }
     body {
       background-color: #f2f4f6;
+      word-break: keep-all;
+      overflow-x: hidden;
     }
     .color-up {
       color: #f04452;
@@ -69,58 +69,58 @@
     }
   </style>
 </head>
-<body class="flex justify-center min-h-screen text-[#191f28]">
+<body class="flex justify-center min-h-screen text-[#191f28] antialiased">
 
-  <div class="w-full max-w-[480px] min-h-screen bg-[#f4f6f8] pb-24 flex flex-col relative shadow-md">
+  <div class="w-full max-w-6xl min-h-screen bg-[#f4f6f8] pb-24 flex flex-col relative shadow-md">
 
     <!-- 상단 고정 헤더 -->
-    <header class="sticky top-0 z-30 bg-[#f4f6f8]/95 backdrop-blur-md px-5 pt-4 pb-3 flex items-center justify-between border-b border-gray-200/50">
+    <header class="sticky top-0 z-30 bg-[#f4f6f8]/95 backdrop-blur-md px-4 sm:px-6 pt-4 pb-3 flex flex-wrap items-center justify-between gap-2 border-b border-gray-200/50">
       <div class="flex items-center gap-2">
-        <h1 class="text-2xl font-bold tracking-tight text-[#191f28]">내 주식·자산</h1>
-        <span id="wsStatusDot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" title="실시간 웹소켓 정상"></span>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-[#191f28] whitespace-nowrap">내 주식·자산</h1>
+        <span id="wsStatusDot" class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" title="실시간 웹소켓 정상"></span>
       </div>
       
-      <div class="flex items-center gap-1.5">
+      <div class="flex items-center gap-1.5 flex-wrap">
         <!-- 통화 전환 토글 버튼 (USD / KRW) -->
-        <button onclick="toggleCurrency()" class="flex items-center gap-1 bg-white border border-gray-200 px-2.5 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow-xs hover:bg-gray-50 active:scale-95 transition">
+        <button onclick="toggleCurrency()" class="flex items-center gap-1 bg-white border border-gray-200 px-2.5 py-1.5 rounded-full text-xs font-bold text-gray-700 shadow-xs hover:bg-gray-50 active:scale-95 transition whitespace-nowrap">
           <i class="ph ph-currency-dollar text-sm text-blue-600"></i>
           <span id="currencyToggleLabel">USD로 보기</span>
         </button>
 
         <!-- Finnhub API Key 설정 버튼 -->
-        <button onclick="openApiKeyModal()" class="w-8 h-8 rounded-full bg-white text-gray-600 border border-gray-200 flex items-center justify-center text-sm hover:bg-gray-100 active:scale-95 transition shadow-xs" title="Finnhub API 설정">
+        <button onclick="openApiKeyModal()" class="w-8 h-8 rounded-full bg-white text-gray-600 border border-gray-200 flex items-center justify-center text-sm hover:bg-gray-100 active:scale-95 transition shadow-xs shrink-0" title="Finnhub API 설정">
           <i class="ph ph-key"></i>
         </button>
 
         <!-- 백업 / 복원 메뉴 열기 -->
-        <button onclick="openBackupModal()" class="w-8 h-8 rounded-full bg-white text-gray-600 border border-gray-200 flex items-center justify-center text-base hover:bg-gray-100 active:scale-95 transition shadow-xs" title="데이터 백업 및 복원">
+        <button onclick="openBackupModal()" class="w-8 h-8 rounded-full bg-white text-gray-600 border border-gray-200 flex items-center justify-center text-base hover:bg-gray-100 active:scale-95 transition shadow-xs shrink-0" title="데이터 백업 및 복원">
           <i class="ph ph-floppy-disk"></i>
         </button>
       </div>
     </header>
 
     <!-- 기준 시점(과거 시점 시뮬레이션) 설정 바 -->
-    <div class="bg-gray-100/90 px-5 py-2 flex items-center justify-between text-xs border-b border-gray-200">
-      <div class="flex items-center gap-1.5 text-gray-700 font-semibold">
-        <i class="ph ph-calendar text-sm text-blue-600"></i>
-        <span>기준 시점:</span>
+    <div class="bg-gray-100/90 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs border-b border-gray-200">
+      <div class="flex items-center gap-1.5 text-gray-700 font-semibold flex-wrap">
+        <i class="ph ph-calendar text-sm text-blue-600 shrink-0"></i>
+        <span class="whitespace-nowrap">기준 시점:</span>
         <input type="date" id="asOfDateInput" onchange="handleAsOfDateChange(this.value)" class="bg-white border border-gray-300 rounded-lg px-2 py-0.5 text-xs text-gray-800 font-bold outline-none focus:border-blue-500">
       </div>
-      <button onclick="resetAsOfDate()" id="asOfResetBtn" class="hidden text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition">
+      <button onclick="resetAsOfDate()" id="asOfResetBtn" class="hidden text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition whitespace-nowrap">
         오늘로 복귀
       </button>
     </div>
 
     <!-- 실시간 상태 및 환율 바 -->
-    <div class="bg-white/90 px-5 py-2 flex items-center justify-between text-xs text-gray-600 border-b border-gray-100">
-      <div class="flex items-center gap-1.5">
-        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600">
+    <div class="bg-white/90 px-4 sm:px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600 border-b border-gray-100">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span id="wsStatusBadge" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 whitespace-nowrap">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span>
-          실제 데이터 연동
+          연동 ON
         </span>
-        <span id="marketStatusText" class="text-[11px] text-gray-500 font-medium">Finnhub 시세 수신 중</span>
+        <span id="marketStatusText" class="text-[11px] text-gray-500 font-medium whitespace-nowrap">Finnhub 시세 수신 중</span>
       </div>
-      <button onclick="promptExchangeRate()" class="flex items-center gap-1 hover:text-blue-600 font-semibold text-gray-600 transition">
+      <button onclick="promptExchangeRate()" class="flex items-center gap-1 hover:text-blue-600 font-semibold text-gray-600 transition whitespace-nowrap">
         <span>적용 환율:</span>
         <span id="rateLabel" class="text-[#191f28] font-bold">1,347원</span>
         <i class="ph ph-pencil-simple text-[11px]"></i>
@@ -128,93 +128,98 @@
     </div>
 
     <!-- 네비게이션 탭 -->
-    <div class="px-5 pt-3">
-      <div class="flex bg-gray-200/80 p-1 rounded-2xl text-xs font-bold text-gray-500">
-        <button id="navTabDashboard" class="flex-1 py-2 rounded-xl bg-white text-gray-900 shadow-xs transition" onclick="switchNavTab('dashboard')">
+    <div class="px-4 sm:px-6 pt-3">
+      <div class="flex bg-gray-200/80 p-1 rounded-2xl text-xs font-bold text-gray-500 w-full max-w-md mx-auto sm:mx-0">
+        <button id="navTabDashboard" class="flex-1 py-2 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap" onclick="switchNavTab('dashboard')">
           대시보드
         </button>
-        <button id="navTabAnalysis" class="flex-1 py-2 rounded-xl hover:text-gray-900 transition" onclick="switchNavTab('analysis')">
+        <button id="navTabAnalysis" class="flex-1 py-2 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="switchNavTab('analysis')">
           비중·판매수익
         </button>
-        <button id="navTabHistory" class="flex-1 py-2 rounded-xl hover:text-gray-900 transition" onclick="switchNavTab('history')">
+        <button id="navTabHistory" class="flex-1 py-2 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="switchNavTab('history')">
           거래·입출금 내역
         </button>
       </div>
     </div>
 
     <!-- [섹션 1] 대시보드 뷰 -->
-    <main id="viewDashboard" class="px-4 space-y-4 flex-1 mt-3">
+    <main id="viewDashboard" class="px-4 sm:px-6 space-y-4 flex-1 mt-3">
 
-      <!-- 1-1. 내 총 자산 요약 카드 (항상 수수료 포함 상태로 계산) -->
-      <section class="bg-white rounded-3xl p-6 shadow-xs border border-gray-100 relative">
-        <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
-          <div class="flex items-center gap-1.5">
-            <span>내 총 자산</span>
+      <!-- 상단 요약 & 차트 가로 레이아웃 그리드 -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- 1-1. 내 총 자산 요약 카드 -->
+        <section class="lg:col-span-5 bg-white rounded-3xl p-5 sm:p-6 shadow-xs border border-gray-100 relative flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-gray-500 text-sm font-medium">
+              <div class="flex items-center gap-1.5">
+                <span>내 총 자산</span>
+              </div>
+              <button onclick="refreshActualQuotes()" class="text-gray-400 hover:text-gray-700 transition active:rotate-180 duration-500" title="실제 종가 즉시 동기화">
+                <i class="ph ph-arrows-clockwise text-lg"></i>
+              </button>
+            </div>
+
+            <div class="mt-2.5">
+              <h2 id="totalAssetDisplay" class="text-2xl sm:text-[32px] font-extrabold tracking-tight text-[#191f28] break-all">
+                0원
+              </h2>
+              <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span class="text-xs text-gray-400 font-medium">평가손익</span>
+                <span id="totalProfitAmountDisplay" class="text-base font-extrabold color-up whitespace-nowrap">+0원</span>
+                <span id="totalProfitRateBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-up-light color-up whitespace-nowrap">+0.00%</span>
+              </div>
+            </div>
           </div>
-          <button onclick="refreshActualQuotes()" class="text-gray-400 hover:text-gray-700 transition active:rotate-180 duration-500" title="실제 종가 즉시 동기화">
-            <i class="ph ph-arrows-clockwise text-lg"></i>
-          </button>
-        </div>
 
-        <div class="mt-2.5">
-          <h2 id="totalAssetDisplay" class="text-[32px] font-extrabold tracking-tight text-[#191f28]">
-            0원
-          </h2>
-          <div class="flex items-center gap-2 mt-1.5">
-            <span class="text-xs text-gray-400 font-medium">평가손익</span>
-            <span id="totalProfitAmountDisplay" class="text-base font-extrabold color-up">+0원</span>
-            <span id="totalProfitRateBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-up-light color-up">+0.00%</span>
+          <!-- 달러 예수금 -->
+          <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between text-xs gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+              <span class="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">$</span>
+              <span class="text-gray-500 font-medium whitespace-nowrap">달러 예수금</span>
+              <strong id="usdCashDisplay" class="text-gray-900 font-bold text-sm whitespace-nowrap">$0.00</strong>
+              <span id="usdCashKrwSub" class="text-[11px] text-gray-400 font-normal whitespace-nowrap">(0원)</span>
+            </div>
+            <button onclick="openCashModal('DEPOSIT')" class="text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full font-bold hover:bg-blue-100 active:scale-95 transition shrink-0 whitespace-nowrap">
+              입출금 관리
+            </button>
           </div>
-        </div>
+        </section>
 
-        <!-- 달러 예수금 (주식 매매 시 자동 차감/가산) -->
-        <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
-          <div class="flex items-center gap-2">
-            <span class="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">$</span>
-            <span class="text-gray-500 font-medium">달러 예수금</span>
-            <strong id="usdCashDisplay" class="text-gray-900 font-bold text-sm">$0.00</strong>
-            <span id="usdCashKrwSub" class="text-[11px] text-gray-400 font-normal">(0원)</span>
+        <!-- 1-2. 일별 자산 추이 인터랙티브 차트 카드 -->
+        <section class="lg:col-span-7 bg-white rounded-3xl p-5 shadow-xs border border-gray-100 relative flex flex-col justify-between">
+          <div class="flex bg-gray-100/90 p-1 rounded-2xl mb-3 text-xs font-bold text-gray-500">
+            <button class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap" onclick="selectPeriod('1M', this)">1개월</button>
+            <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="selectPeriod('3M', this)">3개월</button>
+            <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="selectPeriod('6M', this)">6개월</button>
+            <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="selectPeriod('ALL', this)">전체</button>
           </div>
-          <button onclick="openCashModal('DEPOSIT')" class="text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full font-bold hover:bg-blue-100 active:scale-95 transition">
-            입출금 관리
-          </button>
-        </div>
-      </section>
 
-      <!-- 1-2. 일별 자산 추이 인터랙티브 차트 카드 -->
-      <section class="bg-white rounded-3xl p-5 shadow-xs border border-gray-100 relative">
-        <div class="flex bg-gray-100/90 p-1 rounded-2xl mb-3 text-xs font-bold text-gray-500">
-          <button class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition" onclick="selectPeriod('1M', this)">1개월</button>
-          <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="selectPeriod('3M', this)">3개월</button>
-          <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="selectPeriod('6M', this)">6개월</button>
-          <button class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="selectPeriod('ALL', this)">전체</button>
-        </div>
-
-        <div class="h-48 w-full relative mt-2">
-          <div id="chartCustomTooltip" class="hidden bg-[#191f28] text-white px-3.5 py-2 rounded-2xl shadow-xl border border-gray-700 min-w-[110px] text-center">
-            <p id="tooltipDate" class="text-[11px] text-gray-300 font-medium">-</p>
-            <p id="tooltipValue" class="text-sm font-extrabold text-white mt-0.5 tracking-tight">0원</p>
+          <div class="h-48 w-full relative mt-2">
+            <div id="chartCustomTooltip" class="hidden bg-[#191f28] text-white px-3.5 py-2 rounded-2xl shadow-xl border border-gray-700 min-w-[110px] text-center">
+              <p id="tooltipDate" class="text-[11px] text-gray-300 font-medium">-</p>
+              <p id="tooltipValue" class="text-sm font-extrabold text-white mt-0.5 tracking-tight">0원</p>
+            </div>
+            <canvas id="trendChart"></canvas>
           </div>
-          <canvas id="trendChart"></canvas>
-        </div>
 
-        <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-50">
-          <span id="chartStartDateLabel">-</span>
-          <div class="flex items-center gap-1.5 text-blue-600 font-semibold">
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-            <span id="chartLegendCaption">합산 자산 추이 (원화 환산)</span>
+          <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-50 gap-1 flex-wrap">
+            <span id="chartStartDateLabel" class="whitespace-nowrap">-</span>
+            <div class="flex items-center gap-1.5 text-blue-600 font-semibold whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+              <span id="chartLegendCaption">합산 자산 추이 (원화 환산)</span>
+            </div>
+            <span id="chartEndDateLabel" class="whitespace-nowrap">오늘</span>
           </div>
-          <span id="chartEndDateLabel">오늘</span>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <!-- 1-3. 보유 주식 헤더 & 정렬 바 -->
-      <div class="flex items-center justify-between pt-1 px-1">
+      <div class="flex items-center justify-between pt-2 px-1 flex-wrap gap-2">
         <div class="flex items-center gap-2">
-          <h3 class="font-bold text-lg text-gray-900">보유 주식</h3>
+          <h3 class="font-bold text-lg text-gray-900 whitespace-nowrap">보유 주식</h3>
           <span id="holdingStockCountBadge" class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
           <!-- 수수료 ON/OFF 토글 버튼 -->
-          <button id="feeToggleBtn" onclick="toggleFeeMode()" class="flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition" title="보유 주식 평가 시 예상 매도수수료 차감 여부 토글">
+          <button id="feeToggleBtn" onclick="toggleFeeMode()" class="flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition whitespace-nowrap" title="보유 주식 평가 시 예상 매도수수료 차감 여부 토글">
             <i class="ph ph-receipt text-xs"></i>
             <span id="feeToggleLabel">수수료</span>
           </button>
@@ -228,113 +233,118 @@
             <option value="rate_asc">수익률 낮은순</option>
           </select>
 
-          <button onclick="openTradeModal('BUY')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition flex items-center gap-1 active:scale-95">
+          <button onclick="openTradeModal('BUY')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition flex items-center gap-1 active:scale-95 whitespace-nowrap">
             <i class="ph ph-plus-bold"></i> 거래 등록
           </button>
         </div>
       </div>
 
-      <div id="holdingStockList" class="space-y-3 pb-6"></div>
+      <div id="holdingStockList" class="grid grid-cols-1 md:grid-cols-2 gap-3 pb-6"></div>
     </main>
 
     <!-- [섹션 2] 포트폴리오 비중 & 토스 스타일 판매수익 뷰 -->
-    <section id="viewAnalysis" class="px-4 space-y-4 flex-1 mt-3 hidden">
+    <section id="viewAnalysis" class="px-4 sm:px-6 space-y-4 flex-1 mt-3 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-      <!-- 2-1. 토스 인터랙티브 판매수익 카드 (항상 수수료 포함 상태로 고정 계산) -->
-      <div class="bg-white rounded-3xl p-6 shadow-xs border border-gray-100 space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="font-bold text-base text-gray-900">판매수익 (실현손익)</h3>
-            <p class="text-xs text-gray-400 mt-0.5">매도 완료된 주식의 실현 순이익입니다.</p>
-          </div>
-        </div>
-
-        <!-- 기간 단위 선택 세그먼트 (일 / 월 / 연 / 전체) -->
-        <div class="flex bg-gray-100/90 p-1 rounded-2xl text-xs font-bold text-gray-500">
-          <button id="saleModeDay" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="changeSaleProfitMode('DAY')">일</button>
-          <button id="saleModeMonth" class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition" onclick="changeSaleProfitMode('MONTH')">월</button>
-          <button id="saleModeYear" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="changeSaleProfitMode('YEAR')">연</button>
-          <button id="saleModeAll" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition" onclick="changeSaleProfitMode('ALL')">전체</button>
-        </div>
-
-        <!-- 좌우 이동 내비게이션 컨트롤러 -->
-        <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100">
-          <button id="btnSalePrev" onclick="navigateSalePeriod(-1)" class="w-8 h-8 rounded-full bg-white text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-xs active:scale-90 transition">
-            <i class="ph ph-caret-left-bold text-base"></i>
-          </button>
-          
-          <div class="text-center">
-            <span id="salePeriodTitle" class="font-extrabold text-sm text-gray-900">-</span>
-            <span id="salePeriodSub" class="block text-[10px] text-gray-400 font-medium">선택된 기간</span>
-          </div>
-
-          <button id="btnSaleNext" onclick="navigateSalePeriod(1)" class="w-8 h-8 rounded-full bg-white text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-xs active:scale-90 transition">
-            <i class="ph ph-caret-right-bold text-base"></i>
-          </button>
-        </div>
-
-        <!-- 3. 실시간 검색창 (판매수익 검색: ex 엔비디아, AAPL) -->
-        <div class="relative">
-          <input type="text" id="saleSearchInput" oninput="handleSaleSearch(this.value)" placeholder="판매수익 검색 (종목명, 티커: ex 엔비디아, AAPL)" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-800 outline-none focus:border-blue-500 focus:bg-white transition shadow-2xs">
-          <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-sm"></i>
-          <button onclick="clearSaleSearch()" id="saleSearchClearBtn" class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-gray-600">
-            <i class="ph ph-x-circle-fill text-base"></i>
-          </button>
-        </div>
-
-        <!-- 해당 기간 집계 실현 수익 금액 및 수익률 -->
-        <div class="p-4 rounded-2xl bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-100 flex items-center justify-between">
-          <div>
-            <span class="text-xs text-gray-400 font-medium">실현 손익 합계 (순수익)</span>
-            <h4 id="saleTotalProfitAmount" class="text-2xl font-extrabold color-up mt-0.5">+0원</h4>
-          </div>
-          <div class="text-right">
-            <span class="text-xs text-gray-400 font-medium">수익률</span>
-            <div class="mt-0.5">
-              <span id="saleTotalProfitRate" class="text-sm font-extrabold px-2.5 py-1 rounded-xl bg-up-light color-up">+0.00%</span>
+        <!-- 2-1. 토스 인터랙티브 판매수익 카드 -->
+        <div class="lg:col-span-7 bg-white rounded-3xl p-5 sm:p-6 shadow-xs border border-gray-100 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-base text-gray-900">판매수익 (실현손익)</h3>
+              <p class="text-xs text-gray-400 mt-0.5">매도 완료된 주식의 실현 순이익입니다.</p>
             </div>
           </div>
-        </div>
 
-        <!-- 4. 해당 기간 동안 발생한 매도 종목 상세 리스트 (수수료/제세금/정산금액 표시 + 터치 수정) -->
-        <div class="space-y-2 pt-1">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-gray-600">매도 내역 (<span id="saleItemCount">0</span>)</span>
-            <span class="text-[10px] text-gray-400">항목 터치 시 매도 내역 수정</span>
+          <!-- 기간 단위 선택 세그먼트 -->
+          <div class="flex bg-gray-100/90 p-1 rounded-2xl text-xs font-bold text-gray-500">
+            <button id="saleModeDay" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="changeSaleProfitMode('DAY')">일</button>
+            <button id="saleModeMonth" class="flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap" onclick="changeSaleProfitMode('MONTH')">월</button>
+            <button id="saleModeYear" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="changeSaleProfitMode('YEAR')">연</button>
+            <button id="saleModeAll" class="flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap" onclick="changeSaleProfitMode('ALL')">전체</button>
           </div>
-          <div id="saleItemList" class="space-y-2"></div>
-        </div>
-      </div>
 
-      <!-- 2-2. 원형 도넛 그래프 (포트폴리오 비중) -->
-      <div class="bg-white rounded-3xl p-6 shadow-xs border border-gray-100">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-base text-gray-900">포트폴리오 자산 비중</h3>
-          <span class="text-xs text-gray-400">비율 확인</span>
-        </div>
-        <p class="text-xs text-gray-400 mb-4">보유 주식 및 달러 현금의 전체 자산 대비 구성 비율입니다.</p>
-        
-        <div class="h-52 w-full relative flex items-center justify-center">
-          <canvas id="doughnutChart"></canvas>
+          <!-- 좌우 이동 내비게이션 컨트롤러 -->
+          <div class="flex items-center justify-between bg-gray-50 px-4 py-2.5 rounded-2xl border border-gray-100">
+            <button id="btnSalePrev" onclick="navigateSalePeriod(-1)" class="w-8 h-8 rounded-full bg-white text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-xs active:scale-90 transition shrink-0">
+              <i class="ph ph-caret-left-bold text-base"></i>
+            </button>
+            
+            <div class="text-center px-2">
+              <span id="salePeriodTitle" class="font-extrabold text-sm text-gray-900 whitespace-nowrap">-</span>
+              <span id="salePeriodSub" class="block text-[10px] text-gray-400 font-medium whitespace-nowrap">선택된 기간</span>
+            </div>
+
+            <button id="btnSaleNext" onclick="navigateSalePeriod(1)" class="w-8 h-8 rounded-full bg-white text-gray-600 hover:text-gray-900 flex items-center justify-center shadow-xs active:scale-90 transition shrink-0">
+              <i class="ph ph-caret-right-bold text-base"></i>
+            </button>
+          </div>
+
+          <!-- 실시간 검색창 -->
+          <div class="relative">
+            <input type="text" id="saleSearchInput" oninput="handleSaleSearch(this.value)" placeholder="판매수익 검색 (종목명, 티커: ex 엔비디아, AAPL)" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-8 py-2 text-xs text-gray-800 outline-none focus:border-blue-500 focus:bg-white transition shadow-2xs">
+            <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+            <button onclick="clearSaleSearch()" id="saleSearchClearBtn" class="hidden absolute right-2.5 top-2 text-gray-400 hover:text-gray-600">
+              <i class="ph ph-x-circle-fill text-base"></i>
+            </button>
+          </div>
+
+          <!-- 해당 기간 집계 실현 수익 금액 및 수익률 -->
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-gray-50 to-blue-50/30 border border-gray-100 flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <span class="text-xs text-gray-400 font-medium whitespace-nowrap">실현 손익 합계 (순수익)</span>
+              <h4 id="saleTotalProfitAmount" class="text-2xl font-extrabold color-up mt-0.5 break-all">+0원</h4>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-gray-400 font-medium whitespace-nowrap">수익률</span>
+              <div class="mt-0.5">
+                <span id="saleTotalProfitRate" class="text-sm font-extrabold px-2.5 py-1 rounded-xl bg-up-light color-up whitespace-nowrap">+0.00%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 해당 기간 동안 발생한 매도 종목 상세 리스트 -->
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-600 whitespace-nowrap">매도 내역 (<span id="saleItemCount">0</span>)</span>
+              <span class="text-[10px] text-gray-400 whitespace-nowrap">항목 터치 시 매도 내역 수정</span>
+            </div>
+            <div id="saleItemList" class="space-y-2"></div>
+          </div>
         </div>
 
-        <div id="doughnutLegend" class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-100 text-xs"></div>
+        <!-- 2-2. 원형 도넛 그래프 (포트폴리오 비중) -->
+        <div class="lg:col-span-5 bg-white rounded-3xl p-5 sm:p-6 shadow-xs border border-gray-100 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="font-bold text-base text-gray-900">포트폴리오 자산 비중</h3>
+              <span class="text-xs text-gray-400 whitespace-nowrap">비율 확인</span>
+            </div>
+            <p class="text-xs text-gray-400 mb-4">보유 주식 및 달러 현금의 전체 자산 대비 구성 비율입니다.</p>
+            
+            <div class="h-52 w-full relative flex items-center justify-center">
+              <canvas id="doughnutChart"></canvas>
+            </div>
+          </div>
+
+          <div id="doughnutLegend" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-100 text-xs"></div>
+        </div>
+
       </div>
     </section>
 
     <!-- [섹션 3] 거래 내역 & 입출금 내역 뷰 -->
-    <section id="viewHistory" class="px-4 space-y-4 flex-1 mt-3 hidden">
-      <div class="flex items-center justify-between">
-        <div class="flex gap-2">
-          <button id="subTabTrades" onclick="switchHistorySubTab('trades')" class="text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white">
+    <section id="viewHistory" class="px-4 sm:px-6 space-y-4 flex-1 mt-3 hidden">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div class="flex gap-2 flex-wrap">
+          <button id="subTabTrades" onclick="switchHistorySubTab('trades')" class="text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white whitespace-nowrap">
             주식 매매 내역 (<span id="tradeCountLabel">0</span>)
           </button>
-          <button id="subTabCash" onclick="switchHistorySubTab('cash')" class="text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200">
+          <button id="subTabCash" onclick="switchHistorySubTab('cash')" class="text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200 whitespace-nowrap">
             달러 입출금 내역 (<span id="cashCountLabel">0</span>)
           </button>
         </div>
 
-        <button onclick="openCurrentActionModal()" class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-full hover:bg-blue-100 transition active:scale-95">
+        <button onclick="openCurrentActionModal()" class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-full hover:bg-blue-100 transition active:scale-95 whitespace-nowrap">
           + 내역 등록
         </button>
       </div>
@@ -353,13 +363,13 @@
         <span>내역 항목을 터치하면 바로 수정할 수 있습니다.</span>
       </div>
 
-      <div id="tradeHistoryList" class="space-y-2.5 pb-6"></div>
-      <div id="cashHistoryList" class="space-y-2.5 pb-6 hidden"></div>
+      <div id="tradeHistoryList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pb-6"></div>
+      <div id="cashHistoryList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5 pb-6 hidden"></div>
     </section>
 
     <!-- [모달 1] 주식 매수/매도 등록 및 수정 모달 -->
-    <div id="tradeModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
-      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+    <div id="tradeModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center">
           <h4 id="tradeModalTitle" class="text-lg font-bold text-gray-900">주식 거래 등록</h4>
           <button onclick="closeModal('tradeModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
@@ -411,8 +421,8 @@
     </div>
 
     <!-- [모달 2] 달러 입출금 등록 및 수정 모달 -->
-    <div id="cashModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
-      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+    <div id="cashModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center">
           <h4 id="cashModalTitle" class="text-lg font-bold text-gray-900">달러 입출금 등록</h4>
           <button onclick="closeModal('cashModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
@@ -453,8 +463,8 @@
     </div>
 
     <!-- [모달 3] 데이터 TXT 파일 백업 및 복원 모달 -->
-    <div id="backupModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
-      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+    <div id="backupModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center">
           <h4 class="text-lg font-bold text-gray-900">데이터 백업 및 복원</h4>
           <button onclick="closeModal('backupModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
@@ -463,7 +473,7 @@
         </div>
 
         <p class="text-xs text-gray-500 leading-relaxed">
-          주식 거래 내역, 달러 입출금 기록, 설정된 API 토큰을 <strong>.txt 백업 파일</strong>로 다운로드하여 영구 보관하거나 다시 불러올 수 있습니다.
+          주식 거래 내역, 달러 입출금 기록, 설정된 API 토큰을 <strong>.txt 백업 파일</strong>로 다운로드하여 영구 보관하거나 다시 불러올 수 있습니다. 추가로 <strong>첫 거래/입금부터 계산된 일별 보유 주식, 평단가 및 당일 종가 기록</strong>도 함께 저장됩니다.
         </p>
 
         <div class="space-y-3 pt-1">
@@ -481,8 +491,8 @@
     </div>
 
     <!-- [모달 4] Finnhub API Key 설정 모달 -->
-    <div id="apiKeyModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden">
-      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl">
+    <div id="apiKeyModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center">
           <h4 class="text-lg font-bold text-gray-900">Finnhub API 설정</h4>
           <button onclick="closeModal('apiKeyModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
@@ -523,23 +533,21 @@
     const STORAGE_KEY_API = "FINNHUB_API_KEY";
     const STORAGE_KEY_RATE = "EXCHANGE_RATE";
     const STORAGE_KEY_CURRENCY = "DISPLAY_CURRENCY";
-    const STORAGE_KEY_HOLDING_FEE = "APPLY_HOLDING_FEE_MODE"; // 오직 보유 주식에만 적용되는 토글 상태
+    const STORAGE_KEY_HOLDING_FEE = "APPLY_HOLDING_FEE_MODE";
+    const STORAGE_KEY_HISTORICAL_CACHE = "HISTORICAL_PRICE_CACHE_V1";
 
     let finnhubKey = localStorage.getItem(STORAGE_KEY_API) || 'sandbox_c0123456789';
     let exchangeRate = parseFloat(localStorage.getItem(STORAGE_KEY_RATE)) || 1347.0;
     let displayCurrency = localStorage.getItem(STORAGE_KEY_CURRENCY) || 'KRW';
-    // 보유 주식에서만 작동하는 수수료 토글 (기본 ON)
     let applyHoldingFee = localStorage.getItem(STORAGE_KEY_HOLDING_FEE) !== 'false';
     let currentSortMode = 'val_desc';
     let activeNavTab = 'dashboard';
     let activeHistorySubTab = 'trades';
 
-    // 특정 날짜 기준 시뮬레이션 상태 (null이면 오늘/현재 기준)
     let selectedAsOfDate = null;
 
-    // 토스 판매수익 기간 이동 뷰어 상태 및 검색어
-    let saleProfitMode = 'MONTH'; // 'DAY', 'MONTH', 'YEAR', 'ALL'
-    let saleCurrentAnchorDate = new Date(); // 기준 일자
+    let saleProfitMode = 'MONTH';
+    let saleCurrentAnchorDate = new Date();
     let saleSearchKeyword = '';
     let historySearchKeyword = '';
 
@@ -579,7 +587,7 @@
       "AAPL": 122.07
     };
 
-    let historicalPriceCache = {};
+    let historicalPriceCache = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORICAL_CACHE)) || {};
 
     let socket = null;
     let trendChart = null;
@@ -631,7 +639,7 @@
     }
 
     // ===================================================
-    // 2. 토스증권 거래내역서 기준 정밀 수수료/제세금 산정 공식
+    // 2. 수수료 및 제세금 산정
     // ===================================================
     function calcTossBuyFee(grossAmountUsd) {
       return Math.round(grossAmountUsd * 0.001 * 100) / 100;
@@ -656,7 +664,7 @@
     }
 
     // ===================================================
-    // 3. 예수금(현금) 잔액 산출: 매수 시 현금 차감, 매도 시 현금 가산
+    // 3. 예수금(현금) 잔액 산출
     // ===================================================
     function computeCashUsd() {
       let total = 0;
@@ -686,7 +694,7 @@
     }
 
     // ===================================================
-    // 4. 포트폴리오 보유 주식 산출 (수수료 토글은 보유주식에서만 작동)
+    // 4. 포트폴리오 보유 주식 산출
     // ===================================================
     function computeHoldings() {
       const map = {};
@@ -841,9 +849,9 @@
       modes.forEach(m => {
         const btn = document.getElementById(`saleMode${m}`);
         if (m.toUpperCase() === mode) {
-          btn.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition font-bold";
+          btn.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition font-bold whitespace-nowrap";
         } else {
-          btn.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition font-bold text-gray-500";
+          btn.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition font-bold text-gray-500 whitespace-nowrap";
         }
       });
 
@@ -957,10 +965,10 @@
       const colorClass = isUp ? 'color-up' : 'color-down';
       const bgClass = isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
 
-      totalAmountEl.className = `text-2xl font-extrabold ${colorClass} mt-0.5`;
+      totalAmountEl.className = `text-2xl font-extrabold ${colorClass} mt-0.5 break-all`;
       totalAmountEl.textContent = `${sign}${formatMoney(sumProfitUsd)}`;
 
-      totalRateEl.className = `text-sm font-extrabold px-2.5 py-1 rounded-xl ${bgClass}`;
+      totalRateEl.className = `text-sm font-extrabold px-2.5 py-1 rounded-xl ${bgClass} whitespace-nowrap`;
       totalRateEl.textContent = `${sign}${overallRate.toFixed(2)}%`;
 
       listEl.innerHTML = '';
@@ -980,38 +988,38 @@
         const itemBg = itemUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
 
         const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-blue-50/40 active:scale-[0.99] cursor-pointer transition";
+        row.className = "flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-blue-50/40 active:scale-[0.99] cursor-pointer transition flex-wrap sm:flex-nowrap gap-2";
         row.onclick = () => openEditTradeModal(s.id);
         row.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 min-w-0">
             <div class="w-9 h-9 rounded-xl bg-blue-100/60 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
               ${s.symbol.slice(0, 2)}
             </div>
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-gray-900 text-xs">${s.name}</span>
-                <span class="text-[10px] text-gray-400 font-mono">${s.symbol}</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-bold text-gray-900 text-xs truncate">${s.name}</span>
+                <span class="text-[10px] text-gray-400 font-mono whitespace-nowrap">${s.symbol}</span>
               </div>
-              <p class="text-[11px] text-gray-500 mt-0.5 font-medium">
+              <p class="text-[11px] text-gray-500 mt-0.5 font-medium whitespace-nowrap">
                 ${s.shares}주 매도 · 체결단가 $${s.price.toFixed(2)}
               </p>
-              <div class="text-[10px] text-gray-400 mt-0.5 space-x-1">
-                <span>정산금액: <strong>$${s.netProceeds.toFixed(2)}</strong></span>
+              <div class="text-[10px] text-gray-400 mt-0.5 flex flex-wrap items-center gap-1">
+                <span class="whitespace-nowrap">정산금액: <strong>$${s.netProceeds.toFixed(2)}</strong></span>
                 <span class="text-gray-300">|</span>
-                <span class="text-rose-500 font-medium">수수료·세금: -$${s.totalFee.toFixed(2)}</span>
-                <span class="text-[9px] text-gray-400">(수수료 $${s.commission.toFixed(2)}, 제세금 $${s.secTax.toFixed(2)})</span>
+                <span class="text-rose-500 font-medium whitespace-nowrap">수수료·세금: -$${s.totalFee.toFixed(2)}</span>
+                <span class="text-[9px] text-gray-400 whitespace-nowrap">(수수료 $${s.commission.toFixed(2)}, 제세금 $${s.secTax.toFixed(2)})</span>
               </div>
             </div>
           </div>
 
-          <div class="text-right shrink-0">
-            <p class="font-extrabold text-xs ${itemColor}">
+          <div class="text-right shrink-0 ml-auto sm:ml-0">
+            <p class="font-extrabold text-xs ${itemColor} whitespace-nowrap">
               ${itemSign}${formatMoney(s.profitUsd)}
             </p>
-            <span class="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md ${itemBg} mt-0.5">
+            <span class="inline-block text-[10px] font-bold px-1.5 py-0.2 rounded-md ${itemBg} mt-0.5 whitespace-nowrap">
               ${itemSign}${s.profitRate.toFixed(2)}%
             </span>
-            <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+            <p class="text-[10px] text-gray-400 font-mono mt-0.5 whitespace-nowrap">
               ${itemSign}$${Math.abs(s.profitUsd).toFixed(2)}
             </p>
           </div>
@@ -1023,20 +1031,34 @@
     // ===================================================
     // 6. Finnhub 실시간 시세 및 API 종가
     // ===================================================
+    function setWsStatusUI(isOn, text) {
+      const dot = document.getElementById("wsStatusDot");
+      const statusText = document.getElementById("marketStatusText");
+      const badge = document.getElementById("wsStatusBadge");
+
+      if (isOn) {
+        dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shrink-0";
+        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 whitespace-nowrap";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span>연동 ON`;
+        statusText.textContent = text || "Finnhub 실시간 시세 수신 중";
+      } else {
+        dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0";
+        badge.className = "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 whitespace-nowrap";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1"></span>연동 OFF`;
+        statusText.textContent = text || "실시간 수신 대기";
+      }
+    }
+
     function initFinnhubSocket() {
       if (socket) {
         try { socket.close(); } catch(e){}
       }
 
-      const dot = document.getElementById("wsStatusDot");
-      const statusText = document.getElementById("marketStatusText");
-
       try {
         socket = new WebSocket(`wss://ws.finnhub.io?token=${finnhubKey}`);
 
         socket.onopen = () => {
-          dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm";
-          statusText.textContent = "Finnhub 실시간 체결 웹소켓 연결됨";
+          setWsStatusUI(true, "Finnhub 실시간 체결 웹소켓 연결됨");
           
           const holdings = computeHoldings();
           holdings.forEach(h => {
@@ -1068,11 +1090,14 @@
         };
 
         socket.onerror = () => {
-          dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-amber-400";
-          statusText.textContent = "웹소켓 대기 (REST 실시간 종가 모드)";
+          setWsStatusUI(false, "웹소켓 연결 장애 (REST 모드)");
+        };
+
+        socket.onclose = () => {
+          setWsStatusUI(false, "웹소켓 연결 종료");
         };
       } catch (err) {
-        dot.className = "inline-block w-2.5 h-2.5 rounded-full bg-gray-400";
+        setWsStatusUI(false, "연동 불가");
       }
     }
 
@@ -1092,10 +1117,10 @@
 
     async function refreshActualQuotes() {
       const holdings = computeHoldings();
-      for (let h of holdings) {
+      await Promise.all(holdings.map(async (h) => {
         const p = await fetchActualRestQuote(h.symbol);
         if (p) quotePrices[h.symbol] = p;
-      }
+      }));
       renderAll();
       fetchAllHistoricalDailyData();
     }
@@ -1131,10 +1156,10 @@
     function updateFeeToggleUI() {
       const btn = document.getElementById('feeToggleBtn');
       if (applyHoldingFee) {
-        btn.className = "flex items-center gap-1 bg-blue-50 border border-blue-400 px-2 py-1 rounded-full text-[11px] font-extrabold text-blue-700 shadow-xs active:scale-95 transition";
+        btn.className = "flex items-center gap-1 bg-blue-50 border border-blue-400 px-2 py-1 rounded-full text-[11px] font-extrabold text-blue-700 shadow-xs active:scale-95 transition whitespace-nowrap";
         btn.innerHTML = `<i class="ph ph-check-bold text-xs text-blue-600"></i><span>수수료 ON</span>`;
       } else {
-        btn.className = "flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition";
+        btn.className = "flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition whitespace-nowrap";
         btn.innerHTML = `<i class="ph ph-receipt text-xs"></i><span>수수료 OFF</span>`;
       }
     }
@@ -1221,11 +1246,11 @@
       const bgBadgeClass = isUp ? 'bg-up-light text-[#f04452]' : 'bg-down-light text-[#3182f6]';
 
       const amountEl = document.getElementById('totalProfitAmountDisplay');
-      amountEl.className = `text-base font-extrabold ${colorClass}`;
+      amountEl.className = `text-base font-extrabold ${colorClass} whitespace-nowrap`;
       amountEl.textContent = `${sign}${formatMoney(totalProfitUsd)}`;
 
       const badgeEl = document.getElementById('totalProfitRateBadge');
-      badgeEl.className = `text-xs font-bold px-2 py-0.5 rounded-full ${bgBadgeClass}`;
+      badgeEl.className = `text-xs font-bold px-2 py-0.5 rounded-full ${bgBadgeClass} whitespace-nowrap`;
       badgeEl.textContent = `${sign}${totalProfitRate.toFixed(2)}%`;
 
       document.getElementById('usdCashDisplay').textContent = `$${cashUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1240,7 +1265,7 @@
 
       if (holdings.length === 0) {
         container.innerHTML = `
-          <div class="bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100">
+          <div class="col-span-full bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100">
             <i class="ph ph-chart-line-up text-3xl mb-1 text-gray-300"></i>
             <p class="text-sm font-semibold text-gray-500">보유 중인 주식이 없습니다.</p>
             <p class="text-xs text-gray-400 mt-1">상단의 '+ 거래 등록' 버튼으로 매수 내역을 추가해보세요.</p>
@@ -1257,39 +1282,39 @@
 
         const card = document.createElement('div');
         card.id = `holding-row-${stock.symbol}`;
-        card.className = "bg-white rounded-3xl p-5 shadow-xs border border-gray-100/90 flex items-center justify-between hover:shadow-sm transition-all";
+        card.className = "bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-gray-100/90 flex items-center justify-between gap-2 hover:shadow-sm transition-all";
         card.innerHTML = `
-          <div class="flex items-center gap-3.5">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50/70 border border-blue-100/60 text-blue-600 flex items-center justify-center text-xl font-black shadow-xs shrink-0">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50/70 border border-blue-100/60 text-blue-600 flex items-center justify-center text-lg sm:text-xl font-black shadow-xs shrink-0">
               ${stock.symbol.slice(0, 2)}
             </div>
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold text-gray-900 text-base leading-tight">${stock.name}</span>
-                <span class="text-[11px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">${stock.symbol}</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-bold text-gray-900 text-sm sm:text-base leading-tight truncate">${stock.name}</span>
+                <span class="text-[10px] sm:text-[11px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded whitespace-nowrap">${stock.symbol}</span>
               </div>
-              <p class="text-xs text-gray-400 mt-1 font-medium">
+              <p class="text-xs text-gray-400 mt-1 font-medium whitespace-nowrap">
                 ${stock.shares.toLocaleString()}주 · 평단 $${stock.avgPrice.toFixed(2)}
               </p>
-              <p class="text-xs text-gray-500 font-semibold mt-0.5">
+              <p class="text-xs text-gray-500 font-semibold mt-0.5 whitespace-nowrap">
                 ${isAsOfMode() ? '기준가' : '현재가'} <span class="font-bold text-gray-800">$${stock.currentPrice.toFixed(2)}</span>
               </p>
             </div>
           </div>
 
-          <div class="text-right">
-            <p class="font-extrabold text-[17px] text-gray-900 tracking-tight">
+          <div class="text-right shrink-0">
+            <p class="font-extrabold text-base sm:text-[17px] text-gray-900 tracking-tight whitespace-nowrap">
               ${formatMoney(stock.evalUsd)}
             </p>
             <div class="flex items-center justify-end gap-1.5 mt-1">
-              <span class="text-xs font-extrabold ${colorClass}">
+              <span class="text-xs font-extrabold ${colorClass} whitespace-nowrap">
                 ${sign}${formatMoney(stock.profitUsd)}
               </span>
-              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-md ${bgBadgeClass}">
+              <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-md ${bgBadgeClass} whitespace-nowrap">
                 ${sign}${stock.profitRate.toFixed(2)}%
               </span>
             </div>
-            <p class="text-[10px] text-gray-400 font-mono mt-0.5">
+            <p class="text-[10px] text-gray-400 font-mono mt-0.5 whitespace-nowrap">
               ${sign}$${Math.abs(stock.profitUsd).toFixed(2)}
             </p>
           </div>
@@ -1299,7 +1324,7 @@
     }
 
     // ===================================================
-    // 9. 일별 종가 및 자산 추이 인터랙티브 차트 엔진
+    // 9. 일별 종가 및 자산 추이 차트 엔진 (병렬화 최적화)
     // ===================================================
     let selectedPeriodKey = '1M';
 
@@ -1310,6 +1335,95 @@
       return `${y}-${m}-${d}`;
     }
 
+    // 외부 Fetch 타임아웃 헬퍼
+    async function fetchWithTimeout(resource, options = {}) {
+      const { timeout = 3500 } = options;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(resource, {
+          ...options,
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
+      }
+    }
+
+    async function fetchSingleSymbolHistory(sym, fromTime, toTime) {
+      if (!historicalPriceCache[sym]) historicalPriceCache[sym] = {};
+
+      const todayKey = formatDateKey(new Date());
+      if (quotePrices[sym] && !historicalPriceCache[sym][todayKey]) {
+        historicalPriceCache[sym][todayKey] = quotePrices[sym];
+      }
+
+      let cachedDaysCount = 0;
+      const testDate = new Date();
+      for (let i = 0; i < 90; i++) {
+        const k = formatDateKey(testDate);
+        if (historicalPriceCache[sym][k] !== undefined) {
+          cachedDaysCount++;
+        }
+        testDate.setDate(testDate.getDate() - 1);
+      }
+
+      if (cachedDaysCount >= 45) return false;
+
+      let fetched = false;
+
+      // 1. Finnhub API 우선 수신
+      if (finnhubKey && !finnhubKey.startsWith('sandbox_')) {
+        try {
+          const fhUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${sym}&resolution=D&from=${fromTime}&to=${toTime}&token=${finnhubKey}`;
+          const res = await fetchWithTimeout(fhUrl, { timeout: 3000 });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.s === 'ok' && Array.isArray(data.c) && Array.isArray(data.t)) {
+              data.t.forEach((ts, idx) => {
+                const dk = formatDateKey(new Date(ts * 1000));
+                const closeVal = Number(data.c[idx]);
+                if (!isNaN(closeVal) && closeVal > 0) {
+                  historicalPriceCache[sym][dk] = closeVal;
+                }
+              });
+              fetched = true;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Yahoo Finance 보조 수신 (CORS 프록시)
+      if (!fetched) {
+        try {
+          const yahooTarget = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=6mo&interval=1d`;
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooTarget)}`;
+          const res = await fetchWithTimeout(proxyUrl, { timeout: 3500 });
+          if (res.ok) {
+            const data = await res.json();
+            const result = data?.chart?.result?.[0];
+            if (result && result.timestamp && result.indicators?.quote?.[0]?.close) {
+              const timestamps = result.timestamp;
+              const closes = result.indicators.quote[0].close;
+              timestamps.forEach((ts, idx) => {
+                const closeVal = closes[idx];
+                if (closeVal !== null && closeVal !== undefined && !isNaN(closeVal)) {
+                  const dk = formatDateKey(new Date(ts * 1000));
+                  historicalPriceCache[sym][dk] = Number(closeVal);
+                }
+              });
+              fetched = true;
+            }
+          }
+        } catch (e) {}
+      }
+
+      return fetched;
+    }
+
     async function fetchAllHistoricalDailyData() {
       const symbols = Array.from(new Set(trades.map(t => t.symbol.toUpperCase())));
       if (symbols.length === 0) return;
@@ -1317,59 +1431,15 @@
       const toTime = Math.floor(Date.now() / 1000);
       const fromTime = toTime - (220 * 24 * 3600);
 
-      for (let sym of symbols) {
-        if (!historicalPriceCache[sym]) historicalPriceCache[sym] = {};
+      // 모든 종목 동시 병렬 요청 처리 (Parallel Processing)
+      const results = await Promise.all(
+        symbols.map(sym => fetchSingleSymbolHistory(sym, fromTime, toTime))
+      );
 
-        let fetched = false;
+      const needSaveCache = results.some(updated => updated === true);
 
-        if (finnhubKey && !finnhubKey.startsWith('sandbox_')) {
-          try {
-            const fhUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${sym}&resolution=D&from=${fromTime}&to=${toTime}&token=${finnhubKey}`;
-            const res = await fetch(fhUrl);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.s === 'ok' && Array.isArray(data.c) && Array.isArray(data.t)) {
-                data.t.forEach((ts, idx) => {
-                  const dk = formatDateKey(new Date(ts * 1000));
-                  const closeVal = Number(data.c[idx]);
-                  if (!isNaN(closeVal) && closeVal > 0) {
-                    historicalPriceCache[sym][dk] = closeVal;
-                  }
-                });
-                fetched = true;
-              }
-            }
-          } catch (e) {}
-        }
-
-        if (!fetched) {
-          try {
-            const yahooTarget = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=6mo&interval=1d`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooTarget)}`;
-            const res = await fetch(proxyUrl);
-            if (res.ok) {
-              const data = await res.json();
-              const result = data?.chart?.result?.[0];
-              if (result && result.timestamp && result.indicators?.quote?.[0]?.close) {
-                const timestamps = result.timestamp;
-                const closes = result.indicators.quote[0].close;
-                timestamps.forEach((ts, idx) => {
-                  const closeVal = closes[idx];
-                  if (closeVal !== null && closeVal !== undefined && !isNaN(closeVal)) {
-                    const dk = formatDateKey(new Date(ts * 1000));
-                    historicalPriceCache[sym][dk] = Number(closeVal);
-                  }
-                });
-                fetched = true;
-              }
-            }
-          } catch (e) {}
-        }
-
-        const todayKey = formatDateKey(new Date());
-        if (quotePrices[sym] && !historicalPriceCache[sym][todayKey]) {
-          historicalPriceCache[sym][todayKey] = quotePrices[sym];
-        }
+      if (needSaveCache) {
+        localStorage.setItem(STORAGE_KEY_HISTORICAL_CACHE, JSON.stringify(historicalPriceCache));
       }
 
       updateTrendChart();
@@ -1596,9 +1666,9 @@
       selectedPeriodKey = period;
       const buttons = btn.parentElement.querySelectorAll('button');
       buttons.forEach(b => {
-        b.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition";
+        b.className = "flex-1 py-1.5 rounded-xl hover:text-gray-900 transition whitespace-nowrap";
       });
-      btn.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition";
+      btn.className = "flex-1 py-1.5 rounded-xl bg-white text-gray-900 shadow-xs transition whitespace-nowrap";
       updateTrendChart();
     }
 
@@ -1675,13 +1745,13 @@
         const color = colors[i % colors.length];
 
         const item = document.createElement('div');
-        item.className = "flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100";
+        item.className = "flex items-center justify-between p-2 rounded-xl bg-gray-50 border border-gray-100 gap-1";
         item.innerHTML = `
-          <div class="flex items-center gap-1.5 overflow-hidden">
+          <div class="flex items-center gap-1.5 min-w-0">
             <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${color}"></span>
             <span class="font-bold text-gray-800 truncate">${name}</span>
           </div>
-          <span class="font-extrabold text-gray-900 shrink-0">${pct}%</span>
+          <span class="font-extrabold text-gray-900 shrink-0 whitespace-nowrap">${pct}%</span>
         `;
         legendEl.appendChild(item);
       });
@@ -1721,7 +1791,7 @@
 
       if (filteredTrades.length === 0) {
         tradeList.innerHTML = `
-          <div class="bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
+          <div class="col-span-full bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
             ${historySearchKeyword ? `'${historySearchKeyword}' 검색 결과와 일치하는 거래 내역이 없습니다.` : '등록된 매매 내역이 없습니다.'}
           </div>
         `;
@@ -1746,7 +1816,7 @@
           }
 
           const item = document.createElement('div');
-          item.className = "bg-white rounded-2xl p-4 shadow-xs border border-gray-100 flex items-center justify-between hover:border-blue-300 active:scale-[0.99] cursor-pointer transition";
+          item.className = "bg-white rounded-2xl p-4 shadow-xs border border-gray-100 flex items-center justify-between hover:border-blue-300 active:scale-[0.99] cursor-pointer transition gap-2";
           item.onclick = (e) => {
             if (!e.target.closest('.delete-btn')) {
               openEditTradeModal(t.id);
@@ -1754,29 +1824,29 @@
           };
 
           item.innerHTML = `
-            <div class="flex items-center gap-3">
-              <span class="text-xs font-bold px-2 py-1 rounded-lg ${badgeClass}">${typeName}</span>
-              <div>
-                <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-gray-900 text-sm">${t.name || t.symbol}</span>
-                  <span class="text-[11px] text-gray-400 font-mono">${t.symbol}</span>
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-xs font-bold px-2 py-1 rounded-lg ${badgeClass} shrink-0 whitespace-nowrap">${typeName}</span>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="font-bold text-gray-900 text-sm truncate">${t.name || t.symbol}</span>
+                  <span class="text-[11px] text-gray-400 font-mono whitespace-nowrap">${t.symbol}</span>
                 </div>
-                <p class="text-[11px] text-gray-400 mt-0.5">
+                <p class="text-[11px] text-gray-400 mt-0.5 whitespace-nowrap">
                   ${t.shares}주 · 체결가 $${Number(t.price).toFixed(2)} (${new Date(t.date).toLocaleDateString()})
                 </p>
-                <p class="text-[10px] text-gray-500 font-medium mt-0.5">
+                <p class="text-[10px] text-gray-500 font-medium mt-0.5 whitespace-nowrap">
                   ${feeDetailsText}
                 </p>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
               <div class="text-right">
-                <p class="font-extrabold text-sm text-gray-900">${formatMoney(effectiveAmountUsd)}</p>
-                <p class="text-[10px] text-gray-400 font-medium">$${effectiveAmountUsd.toFixed(2)}</p>
+                <p class="font-extrabold text-sm text-gray-900 whitespace-nowrap">${formatMoney(effectiveAmountUsd)}</p>
+                <p class="text-[10px] text-gray-400 font-medium whitespace-nowrap">$${effectiveAmountUsd.toFixed(2)}</p>
               </div>
               
-              <button onclick="quickDeleteTrade('${t.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition active:scale-90" title="삭제">
+              <button onclick="quickDeleteTrade('${t.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition active:scale-90 shrink-0" title="삭제">
                 <i class="ph ph-trash text-base"></i>
               </button>
             </div>
@@ -1798,7 +1868,7 @@
 
       if (filteredCash.length === 0) {
         cashList.innerHTML = `
-          <div class="bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
+          <div class="col-span-full bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
             ${historySearchKeyword ? `'${historySearchKeyword}' 검색 결과와 일치하는 입출금 내역이 없습니다.` : '등록된 입출금 내역이 없습니다.'}
           </div>
         `;
@@ -1810,7 +1880,7 @@
           const sign = isDeposit ? '+' : '-';
 
           const item = document.createElement('div');
-          item.className = "bg-white rounded-2xl p-4 shadow-xs border border-gray-100 flex items-center justify-between hover:border-blue-300 active:scale-[0.99] cursor-pointer transition";
+          item.className = "bg-white rounded-2xl p-4 shadow-xs border border-gray-100 flex items-center justify-between hover:border-blue-300 active:scale-[0.99] cursor-pointer transition gap-2";
           item.onclick = (e) => {
             if (!e.target.closest('.delete-btn')) {
               openEditCashModal(c.id);
@@ -1818,21 +1888,21 @@
           };
 
           item.innerHTML = `
-            <div class="flex items-center gap-3">
-              <span class="text-xs font-bold px-2 py-1 rounded-lg ${badgeClass}">${typeName}</span>
-              <div>
-                <p class="font-bold text-gray-900 text-sm">${c.memo || (isDeposit ? 'USD 계좌 입금' : 'USD 계좌 출금')}</p>
-                <p class="text-[11px] text-gray-400 mt-0.5">${new Date(c.date).toLocaleDateString()}</p>
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-xs font-bold px-2 py-1 rounded-lg ${badgeClass} shrink-0 whitespace-nowrap">${typeName}</span>
+              <div class="min-w-0">
+                <p class="font-bold text-gray-900 text-sm truncate">${c.memo || (isDeposit ? 'USD 계좌 입금' : 'USD 계좌 출금')}</p>
+                <p class="text-[11px] text-gray-400 mt-0.5 whitespace-nowrap">${new Date(c.date).toLocaleDateString()}</p>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
               <div class="text-right">
-                <p class="font-extrabold text-sm ${isDeposit ? 'text-blue-600' : 'text-gray-900'}">${sign}$${Number(c.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                <p class="text-[10px] text-gray-400">(${Math.round(c.amount * exchangeRate).toLocaleString()}원)</p>
+                <p class="font-extrabold text-sm ${isDeposit ? 'text-blue-600' : 'text-gray-900'} whitespace-nowrap">${sign}$${Number(c.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                <p class="text-[10px] text-gray-400 whitespace-nowrap">(${Math.round(c.amount * exchangeRate).toLocaleString()}원)</p>
               </div>
 
-              <button onclick="quickDeleteCash('${c.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition active:scale-90" title="삭제">
+              <button onclick="quickDeleteCash('${c.id}')" class="delete-btn w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition active:scale-90 shrink-0" title="삭제">
                 <i class="ph ph-trash text-base"></i>
               </button>
             </div>
@@ -1898,20 +1968,143 @@
     }
 
     // ===================================================
-    // 13. 데이터 백업 / 복원
+    // 13. 일별 보유 주식, 평단가 및 일별 종가 스냅샷 엔진 및 백업 / 복원
     // ===================================================
+    function calculateDailyHoldingSnapshots() {
+      let earliestTime = Date.now();
+      let hasRecord = false;
+
+      trades.forEach(t => {
+        const tm = new Date(t.date).getTime();
+        if (tm < earliestTime) earliestTime = tm;
+        hasRecord = true;
+      });
+      cashTransactions.forEach(c => {
+        const tm = new Date(c.date).getTime();
+        if (tm < earliestTime) earliestTime = tm;
+        hasRecord = true;
+      });
+
+      if (!hasRecord) return [];
+
+      const startDate = new Date(earliestTime);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+
+      const snapshots = [];
+      const cur = new Date(startDate.getTime());
+
+      while (cur.getTime() <= endDate.getTime()) {
+        const dateStr = formatDateKey(cur);
+        const endOfDayTime = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), 23, 59, 59, 999).getTime();
+
+        const sortedSubTrades = trades
+          .filter(t => new Date(t.date).getTime() <= endOfDayTime)
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const stockMap = {};
+        let cumulativeInvestUsd = 0;
+
+        sortedSubTrades.forEach(t => {
+          const sym = t.symbol.toUpperCase();
+          if (!stockMap[sym]) {
+            stockMap[sym] = {
+              symbol: sym,
+              name: t.name || sym,
+              shares: 0,
+              totalCostUsd: 0
+            };
+          }
+
+          const gross = Number(t.shares) * Number(t.price);
+
+          if (t.type === 'BUY') {
+            const buyFee = calcTossBuyFee(gross);
+            stockMap[sym].shares += Number(t.shares);
+            stockMap[sym].totalCostUsd += (gross + buyFee);
+          } else if (t.type === 'SELL') {
+            const prevShares = stockMap[sym].shares;
+            const sellShares = Number(t.shares);
+            if (prevShares > 0) {
+              const avg = stockMap[sym].totalCostUsd / prevShares;
+              stockMap[sym].shares = Math.max(0, prevShares - sellShares);
+              stockMap[sym].totalCostUsd = Math.max(0, stockMap[sym].shares * avg);
+            }
+          }
+        });
+
+        const holdingsAtDate = [];
+        Object.keys(stockMap).forEach(sym => {
+          const item = stockMap[sym];
+          if (item.shares > 0.00001) {
+            const avgPriceUsd = item.totalCostUsd / item.shares;
+            const closePriceUsd = getStockCloseOnDate(sym, cur);
+            
+            holdingsAtDate.push({
+              symbol: sym,
+              name: item.name,
+              shares: Math.round(item.shares * 10000) / 10000,
+              avgPriceUsd: Math.round(avgPriceUsd * 10000) / 10000,
+              closePriceUsd: Math.round(closePriceUsd * 10000) / 10000,
+              totalCostUsd: Math.round(item.totalCostUsd * 100) / 100
+            });
+            cumulativeInvestUsd += item.totalCostUsd;
+          }
+        });
+
+        let dayCashUsd = 0;
+        cashTransactions.forEach(c => {
+          if (new Date(c.date).getTime() <= endOfDayTime) {
+            if (c.type === 'DEPOSIT') dayCashUsd += Number(c.amount);
+            else if (c.type === 'WITHDRAW') dayCashUsd -= Number(c.amount);
+          }
+        });
+        trades.forEach(t => {
+          if (new Date(t.date).getTime() <= endOfDayTime) {
+            const gross = Number(t.shares) * Number(t.price);
+            if (t.type === 'BUY') {
+              const buyFee = calcTossBuyFee(gross);
+              dayCashUsd -= (gross + buyFee);
+            } else if (t.type === 'SELL') {
+              const sellFee = calcTossSellFee(gross);
+              dayCashUsd += (gross - sellFee);
+            }
+          }
+        });
+
+        snapshots.push({
+          date: dateStr,
+          cashUsd: Math.round(dayCashUsd * 100) / 100,
+          totalStockCostUsd: Math.round(cumulativeInvestUsd * 100) / 100,
+          holdings: holdingsAtDate
+        });
+
+        cur.setDate(cur.getDate() + 1);
+        cur.setHours(0, 0, 0, 0);
+      }
+
+      return snapshots;
+    }
+
     function exportToTxtFile() {
+      const dailySnapshots = calculateDailyHoldingSnapshots();
+
       const backupData = {
         exportedAt: new Date().toISOString(),
-        version: "2.8",
+        version: "3.0",
         trades: trades,
         cashTransactions: cashTransactions,
         exchangeRate: exchangeRate,
         finnhubKey: finnhubKey,
         applyHoldingFee: applyHoldingFee,
+        dailySnapshots: dailySnapshots,
+        historicalPriceCache: historicalPriceCache,
         summary: {
           totalTrades: trades.length,
-          totalCashActions: cashTransactions.length
+          totalCashActions: cashTransactions.length,
+          snapshotDays: dailySnapshots.length
         }
       };
 
@@ -1959,6 +2152,10 @@
             applyHoldingFee = parsed.applyHoldingFee;
             localStorage.setItem(STORAGE_KEY_HOLDING_FEE, applyHoldingFee);
           }
+          if (parsed.historicalPriceCache) {
+            historicalPriceCache = parsed.historicalPriceCache;
+            localStorage.setItem(STORAGE_KEY_HISTORICAL_CACHE, JSON.stringify(historicalPriceCache));
+          }
 
           closeModal('backupModal');
           updateFeeToggleUI();
@@ -1986,8 +2183,8 @@
         const btn = document.getElementById(`navTab${t}`);
         const isActive = t.toLowerCase() === tab;
         btn.className = isActive 
-          ? "flex-1 py-2 rounded-xl bg-white text-gray-900 shadow-xs transition font-bold"
-          : "flex-1 py-2 rounded-xl hover:text-gray-900 transition font-bold text-gray-500";
+          ? "flex-1 py-2 rounded-xl bg-white text-gray-900 shadow-xs transition font-bold whitespace-nowrap"
+          : "flex-1 py-2 rounded-xl hover:text-gray-900 transition font-bold text-gray-500 whitespace-nowrap";
       });
 
       if (tab === 'analysis') {
@@ -2005,11 +2202,11 @@
       const btnCash = document.getElementById('subTabCash');
 
       if (sub === 'trades') {
-        btnTrades.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white";
-        btnCash.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200";
+        btnTrades.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white whitespace-nowrap";
+        btnCash.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200 whitespace-nowrap";
       } else {
-        btnCash.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white";
-        btnTrades.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200";
+        btnCash.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-[#191f28] text-white whitespace-nowrap";
+        btnTrades.className = "text-xs font-bold px-3 py-1.5 rounded-full bg-white text-gray-600 border border-gray-200 whitespace-nowrap";
       }
     }
 
