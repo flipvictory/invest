@@ -195,47 +195,76 @@
           </div>
 
           <div class="h-48 w-full relative mt-2">
-            <div id="chartCustomTooltip" class="hidden bg-[#191f28] text-white px-3.5 py-2 rounded-2xl shadow-xl border border-gray-700 min-w-[110px] text-center">
+            <div id="chartCustomTooltip" class="hidden bg-[#191f28] text-white px-3.5 py-2 rounded-2xl shadow-xl border border-gray-700 min-w-[120px] text-center">
               <p id="tooltipDate" class="text-[11px] text-gray-300 font-medium">-</p>
               <p id="tooltipValue" class="text-sm font-extrabold text-white mt-0.5 tracking-tight">0원</p>
+              <p id="tooltipCost" class="text-[11px] font-semibold text-gray-400 mt-0.5">원금: 0원</p>
             </div>
             <canvas id="trendChart"></canvas>
           </div>
 
           <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 pt-2 border-t border-gray-50 gap-1 flex-wrap">
             <span id="chartStartDateLabel" class="whitespace-nowrap">-</span>
-            <div class="flex items-center gap-1.5 text-blue-600 font-semibold whitespace-nowrap">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-              <span id="chartLegendCaption">합산 자산 추이 (원화 환산)</span>
+            <div class="flex items-center gap-3 font-semibold whitespace-nowrap">
+              <div class="flex items-center gap-1.5 text-blue-600">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                <span id="chartLegendCaption">합산 자산 추이</span>
+              </div>
+              <div class="flex items-center gap-1.5 text-gray-500">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                <span>원금 추세</span>
+              </div>
             </div>
             <span id="chartEndDateLabel" class="whitespace-nowrap">오늘</span>
           </div>
         </section>
       </div>
 
-      <!-- 1-3. 보유 주식 헤더 & 정렬 바 -->
-      <div class="flex items-center justify-between pt-2 px-1 flex-wrap gap-2">
-        <div class="flex items-center gap-2">
-          <h3 class="font-bold text-lg text-gray-900 whitespace-nowrap">보유 주식</h3>
-          <span id="holdingStockCountBadge" class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-          <!-- 수수료 ON/OFF 토글 버튼 -->
-          <button id="feeToggleBtn" onclick="toggleFeeMode()" class="flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition whitespace-nowrap" title="보유 주식 평가 시 예상 매도수수료 차감 여부 토글">
-            <i class="ph ph-receipt text-xs"></i>
-            <span id="feeToggleLabel">수수료</span>
-          </button>
-        </div>
-        
-        <div class="flex items-center gap-2">
-          <select id="sortSelect" onchange="handleSortChange(this.value)" class="text-xs bg-white border border-gray-200 text-gray-700 font-semibold rounded-full px-2.5 py-1 outline-none shadow-xs">
-            <option value="val_desc">평가금액 높은순</option>
-            <option value="val_asc">평가금액 낮은순</option>
-            <option value="rate_desc">수익률 높은순</option>
-            <option value="rate_asc">수익률 낮은순</option>
-          </select>
+      <!-- 1-3. 보유 주식 헤더 & 요약 카드 (요청된 이미지 스타일 적용) -->
+      <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-xs border border-gray-100 space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <h3 class="font-bold text-lg text-gray-900 whitespace-nowrap">보유 주식</h3>
+            <span id="holdingStockCountBadge" class="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <!-- 수수료 ON/OFF 토글 버튼 -->
+            <button id="feeToggleBtn" onclick="toggleFeeMode()" class="flex items-center gap-1 bg-white border border-gray-200 px-2 py-1 rounded-full text-[11px] font-bold text-gray-600 shadow-xs hover:bg-gray-50 active:scale-95 transition whitespace-nowrap" title="보유 주식 평가 시 예상 매도수수료 차감 여부 토글">
+              <i class="ph ph-receipt text-xs"></i>
+              <span id="feeToggleLabel">수수료</span>
+            </button>
 
-          <button onclick="openTradeModal('BUY')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition flex items-center gap-1 active:scale-95 whitespace-nowrap">
-            <i class="ph ph-plus-bold"></i> 거래 등록
-          </button>
+            <select id="sortSelect" onchange="handleSortChange(this.value)" class="text-xs bg-white border border-gray-200 text-gray-700 font-semibold rounded-full px-2.5 py-1 outline-none shadow-xs">
+              <option value="val_desc">평가금액 높은순</option>
+              <option value="val_asc">평가금액 낮은순</option>
+              <option value="rate_desc">수익률 높은순</option>
+              <option value="rate_asc">수익률 낮은순</option>
+            </select>
+
+            <button onclick="openTradeModal('BUY')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition flex items-center gap-1 active:scale-95 whitespace-nowrap">
+              <i class="ph ph-plus-bold"></i> 거래 등록
+            </button>
+          </div>
+        </div>
+
+        <!-- 이미지 디자인 적용: 상단 큰 총 평가금액 + 하단 평가손익 라벨 및 손익 금액 / 수익률 뱃지 -->
+        <div class="pt-1">
+          <!-- 상단: 총 평가금액 (굵고 큰 폰트) -->
+          <div id="holdingStockTotalAmountDisplay" class="text-2xl sm:text-[32px] font-extrabold tracking-tight text-[#191f28] leading-tight">
+            $0.00
+          </div>
+          
+          <!-- 하단: 평가손익 라벨 + 손익금액 + 수익률 뱃지 -->
+          <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span class="text-xs sm:text-sm text-gray-400 font-semibold">평가손익</span>
+            <span id="holdingStockTotalProfitDisplay" class="text-base sm:text-lg font-black color-up tracking-tight whitespace-nowrap">
+              +$0.00
+            </span>
+            <span id="holdingStockTotalRateBadge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-up-light color-up whitespace-nowrap">
+              +0.00%
+            </span>
+          </div>
         </div>
       </div>
 
@@ -522,6 +551,37 @@
       </div>
     </div>
 
+    <!-- [모달 5] 과거 일별 종가 수정 모달 -->
+    <div id="historicalPriceModal" class="fixed inset-0 bg-black/50 z-50 backdrop-blur-xs flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+      <div class="bg-white w-full max-w-[440px] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center">
+          <div>
+            <h4 class="text-lg font-bold text-gray-900"><span id="historicalModalSymbol">-</span> 종가 수정</h4>
+            <p id="historicalModalDate" class="text-xs text-gray-500 mt-0.5">기준 날짜: -</p>
+          </div>
+          <button onclick="closeModal('historicalPriceModal')" class="text-gray-400 hover:text-gray-600 text-xl font-bold p-1">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <form onsubmit="handleHistoricalPriceSubmit(event)" class="space-y-3 text-sm">
+          <input type="hidden" id="historicalModalSymbolInput" value="">
+          <input type="hidden" id="historicalModalDateInput" value="">
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">해당 일자 종가 ($ USD)</label>
+            <input id="inputHistoricalPrice" type="number" step="any" min="0.0001" placeholder="100.00" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 font-bold text-gray-800 outline-none focus:border-blue-500">
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-md transition active:scale-[0.98]">
+              종가 적용하기
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -639,19 +699,19 @@
     }
 
     // ===================================================
-    // 2. 수수료 및 제세금 산정
+    // 2. 건별 수수료 및 제세금 산정 (0.01달러 단위 버림, 10달러 이하 면제)
     // ===================================================
     function calcTossBuyFee(grossAmountUsd) {
-      return Math.round(grossAmountUsd * 0.001 * 100) / 100;
+      if (grossAmountUsd <= 10) return 0;
+      return Math.floor(grossAmountUsd * 0.001 * 100) / 100;
     }
 
     function calcTossSellFeeComponents(grossAmountUsd) {
-      const commission = Math.round(grossAmountUsd * 0.001 * 100) / 100;
-      const rawSec = grossAmountUsd * 0.0000278;
-      let secTax = 0;
-      if (rawSec > 0) {
-        secTax = Math.max(0.01, Math.round(rawSec * 100) / 100);
+      if (grossAmountUsd <= 10) {
+        return { commission: 0, secTax: 0, totalFees: 0 };
       }
+      const commission = Math.floor(grossAmountUsd * 0.001 * 100) / 100;
+      const secTax = Math.floor(grossAmountUsd * 0.0000206 * 100) / 100;
       return {
         commission: commission,
         secTax: secTax,
@@ -694,7 +754,7 @@
     }
 
     // ===================================================
-    // 4. 포트폴리오 보유 주식 산출
+    // 4. 포트폴리오 보유 주식 산출 (당장 판매 시 내야 하는 총 수수료 기준 적용)
     // ===================================================
     function computeHoldings() {
       const map = {};
@@ -713,7 +773,9 @@
             symbol: sym,
             name: t.name || sym,
             shares: 0,
+            pureTradeCostUsd: 0,
             totalCostUsd: 0,
+            accumulatedBuyFees: 0,
             firstDate: t.date
           };
         }
@@ -723,14 +785,18 @@
         if (t.type === 'BUY') {
           const buyFee = calcTossBuyFee(grossTradeAmount);
           map[sym].shares += Number(t.shares);
+          map[sym].pureTradeCostUsd += grossTradeAmount;
+          map[sym].accumulatedBuyFees += buyFee;
           map[sym].totalCostUsd += (grossTradeAmount + buyFee);
         } else if (t.type === 'SELL') {
           const prevShares = map[sym].shares;
           const sellShares = Number(t.shares);
           if (prevShares > 0) {
-            const avg = map[sym].totalCostUsd / prevShares;
+            const ratio = Math.max(0, prevShares - sellShares) / prevShares;
             map[sym].shares = Math.max(0, prevShares - sellShares);
-            map[sym].totalCostUsd = Math.max(0, map[sym].shares * avg);
+            map[sym].pureTradeCostUsd *= ratio;
+            map[sym].accumulatedBuyFees *= ratio;
+            map[sym].totalCostUsd *= ratio;
           }
         }
       });
@@ -739,7 +805,7 @@
       Object.keys(map).forEach(sym => {
         const item = map[sym];
         if (item.shares > 0.00001) {
-          const avgPrice = item.totalCostUsd / item.shares;
+          const avgPrice = item.pureTradeCostUsd / item.shares;
           let currentPrice;
           if (historicalMode) {
             currentPrice = getStockCloseOnDate(sym, cutoffDate);
@@ -749,14 +815,21 @@
 
           const rawEvalUsd = item.shares * currentPrice;
           
-          let sellFees = 0;
+          let evalUsd = rawEvalUsd;
+          let costUsd = item.pureTradeCostUsd;
+          let profitUsd = 0;
+
           if (applyHoldingFee) {
-            sellFees = calcTossSellFee(rawEvalUsd);
+            const estSellFees = calcTossSellFee(rawEvalUsd);
+            const totalImmediateFees = item.accumulatedBuyFees + estSellFees;
+            evalUsd = Math.max(0, rawEvalUsd - totalImmediateFees);
+            costUsd = item.pureTradeCostUsd;
+            profitUsd = evalUsd - costUsd;
+          } else {
+            profitUsd = rawEvalUsd - item.pureTradeCostUsd;
           }
 
-          const evalUsd = Math.max(0, rawEvalUsd - sellFees);
-          const profitUsd = evalUsd - item.totalCostUsd;
-          const profitRate = item.totalCostUsd > 0 ? (profitUsd / item.totalCostUsd) * 100 : 0;
+          const profitRate = costUsd > 0 ? (profitUsd / costUsd) * 100 : 0;
 
           holdings.push({
             symbol: sym,
@@ -766,7 +839,8 @@
             currentPrice: currentPrice,
             rawEvalUsd: rawEvalUsd,
             evalUsd: evalUsd,
-            costUsd: item.totalCostUsd,
+            costUsd: costUsd,
+            buyFees: item.accumulatedBuyFees,
             profitUsd: profitUsd,
             profitRate: profitRate
           });
@@ -785,7 +859,7 @@
     }
 
     // ===================================================
-    // 5. 실현 판매수익 엔진
+    // 5. 실현 판매수익 엔진 (구매 수수료 상세 포함)
     // ===================================================
     function calculateRealizedProfits() {
       const cutoffTime = getEffectiveCutoffDate().getTime();
@@ -798,7 +872,7 @@
       sortedTrades.forEach(t => {
         const sym = t.symbol.toUpperCase();
         if (!pool[sym]) {
-          pool[sym] = { shares: 0, costUsd: 0 };
+          pool[sym] = { shares: 0, totalCostUsd: 0, buyFeesUsd: 0 };
         }
 
         const gross = Number(t.shares) * Number(t.price);
@@ -806,13 +880,16 @@
         if (t.type === 'BUY') {
           const buyFee = calcTossBuyFee(gross);
           pool[sym].shares += Number(t.shares);
-          pool[sym].costUsd += (gross + buyFee);
+          pool[sym].totalCostUsd += (gross + buyFee);
+          pool[sym].buyFeesUsd += buyFee;
         } else if (t.type === 'SELL') {
           const sellShares = Number(t.shares);
           const prevShares = pool[sym].shares;
-          const avgCostPerShare = prevShares > 0 ? (pool[sym].costUsd / prevShares) : Number(t.price);
+          const avgTotalCostPerShare = prevShares > 0 ? (pool[sym].totalCostUsd / prevShares) : Number(t.price);
+          const avgBuyFeePerShare = prevShares > 0 ? (pool[sym].buyFeesUsd / prevShares) : 0;
 
-          const costBasis = sellShares * avgCostPerShare;
+          const costBasis = sellShares * avgTotalCostPerShare;
+          const allocatedBuyFee = sellShares * avgBuyFeePerShare;
           const feePack = calcTossSellFeeComponents(gross);
           const netProceeds = gross - feePack.totalFees;
           const profitUsd = netProceeds - costBasis;
@@ -826,9 +903,11 @@
             price: Number(t.price),
             date: t.date,
             grossUsd: gross,
+            buyFee: allocatedBuyFee,
             commission: feePack.commission,
             secTax: feePack.secTax,
-            totalFee: feePack.totalFees,
+            totalSellFee: feePack.totalFees,
+            totalFee: allocatedBuyFee + feePack.totalFees,
             netProceeds: netProceeds,
             costBasis: costBasis,
             profitUsd: profitUsd,
@@ -836,7 +915,8 @@
           });
 
           pool[sym].shares = Math.max(0, prevShares - sellShares);
-          pool[sym].costUsd = Math.max(0, pool[sym].shares * avgCostPerShare);
+          pool[sym].totalCostUsd = Math.max(0, pool[sym].shares * avgTotalCostPerShare);
+          pool[sym].buyFeesUsd = Math.max(0, pool[sym].shares * avgBuyFeePerShare);
         }
       });
 
@@ -1006,8 +1086,8 @@
               <div class="text-[10px] text-gray-400 mt-0.5 flex flex-wrap items-center gap-1">
                 <span class="whitespace-nowrap">정산금액: <strong>$${s.netProceeds.toFixed(2)}</strong></span>
                 <span class="text-gray-300">|</span>
-                <span class="text-rose-500 font-medium whitespace-nowrap">수수료·세금: -$${s.totalFee.toFixed(2)}</span>
-                <span class="text-[9px] text-gray-400 whitespace-nowrap">(수수료 $${s.commission.toFixed(2)}, 제세금 $${s.secTax.toFixed(2)})</span>
+                <span class="text-rose-500 font-medium whitespace-nowrap">총 제비용: -$${s.totalFee.toFixed(2)}</span>
+                <span class="text-[9px] text-gray-400 whitespace-nowrap">(구매수수료 $${s.buyFee.toFixed(2)}, 판매수수료 $${s.commission.toFixed(2)}, 제세금 $${s.secTax.toFixed(2)})</span>
               </div>
             </div>
           </div>
@@ -1150,7 +1230,7 @@
       applyHoldingFee = !applyHoldingFee;
       localStorage.setItem(STORAGE_KEY_HOLDING_FEE, applyHoldingFee);
       updateFeeToggleUI();
-      renderHoldings();
+      renderAll();
     }
 
     function updateFeeToggleUI() {
@@ -1181,56 +1261,16 @@
     }
 
     // ===================================================
-    // 8. 대시보드 및 보유 주식 목록 렌더링
+    // 8. 대시보드 및 보유 주식 목록 렌더링 (이미지 디자인 형태 전용 업그레이드)
     // ===================================================
     function renderDashboardHeader() {
-      const cutoffTime = getEffectiveCutoffDate().getTime();
-      const cutoffDate = getEffectiveCutoffDate();
-      const historicalMode = isAsOfMode();
-
-      const sortedTrades = [...trades]
-        .filter(t => new Date(t.date).getTime() <= cutoffTime)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-      const map = {};
-
-      sortedTrades.forEach(t => {
-        const sym = t.symbol.toUpperCase();
-        if (!map[sym]) {
-          map[sym] = { shares: 0, totalCostUsd: 0 };
-        }
-        const gross = Number(t.shares) * Number(t.price);
-        if (t.type === 'BUY') {
-          const buyFee = calcTossBuyFee(gross);
-          map[sym].shares += Number(t.shares);
-          map[sym].totalCostUsd += (gross + buyFee);
-        } else if (t.type === 'SELL') {
-          const prev = map[sym].shares;
-          const sellShares = Number(t.shares);
-          if (prev > 0) {
-            const avg = map[sym].totalCostUsd / prev;
-            map[sym].shares = Math.max(0, prev - sellShares);
-            map[sym].totalCostUsd = Math.max(0, map[sym].shares * avg);
-          }
-        }
-      });
-
+      const holdings = computeHoldings();
       let totalStockEvalUsd = 0;
       let totalStockCostUsd = 0;
 
-      Object.keys(map).forEach(sym => {
-        const item = map[sym];
-        if (item.shares > 0.00001) {
-          let curPrice;
-          if (historicalMode) {
-            curPrice = getStockCloseOnDate(sym, cutoffDate);
-          } else {
-            curPrice = quotePrices[sym] || (item.totalCostUsd / item.shares);
-          }
-          const rawVal = item.shares * curPrice;
-          const sellFee = calcTossSellFee(rawVal);
-          totalStockEvalUsd += Math.max(0, rawVal - sellFee);
-          totalStockCostUsd += item.totalCostUsd;
-        }
+      holdings.forEach(h => {
+        totalStockEvalUsd += h.evalUsd;
+        totalStockCostUsd += h.costUsd;
       });
 
       const cashUsd = computeCashUsd();
@@ -1255,7 +1295,31 @@
 
       document.getElementById('usdCashDisplay').textContent = `$${cashUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       document.getElementById('usdCashKrwSub').textContent = `(${Math.round(cashUsd * exchangeRate).toLocaleString()}원)`;
-      document.getElementById('holdingStockCountBadge').textContent = computeHoldings().length;
+      document.getElementById('holdingStockCountBadge').textContent = holdings.length;
+      
+      // =========================================================
+      // [요청된 디자인 이미지 반영] 보유주식 총합 평가금액 & 평가손익 UI
+      // =========================================================
+      const stockProfitUsd = totalStockEvalUsd - totalStockCostUsd;
+      const stockProfitRate = totalStockCostUsd > 0 ? (stockProfitUsd / totalStockCostUsd) * 100 : 0;
+
+      const isStockUp = stockProfitUsd >= 0;
+      const stockSign = isStockUp ? '+' : '';
+      const stockColorClass = isStockUp ? 'color-up' : 'color-down';
+      const stockBgBadgeClass = isStockUp ? 'bg-up-light color-up' : 'bg-down-light color-down';
+
+      // 상단 큰 금액 폰트
+      document.getElementById('holdingStockTotalAmountDisplay').textContent = formatMoney(totalStockEvalUsd);
+
+      // 하단 손익 금액
+      const holdingProfitEl = document.getElementById('holdingStockTotalProfitDisplay');
+      holdingProfitEl.className = `text-base sm:text-lg font-black ${stockColorClass} tracking-tight whitespace-nowrap`;
+      holdingProfitEl.textContent = `${stockSign}${formatMoney(stockProfitUsd)}`;
+
+      // 하단 수익률 뱃지
+      const holdingRateBadge = document.getElementById('holdingStockTotalRateBadge');
+      holdingRateBadge.className = `text-xs font-extrabold px-2.5 py-0.5 rounded-full ${stockBgBadgeClass} whitespace-nowrap`;
+      holdingRateBadge.textContent = `${stockSign}${stockProfitRate.toFixed(2)}%`;
     }
 
     function renderHoldings() {
@@ -1274,6 +1338,8 @@
         return;
       }
 
+      const historicalMode = isAsOfMode();
+
       holdings.forEach(stock => {
         const isUp = stock.profitRate >= 0;
         const colorClass = isUp ? 'color-up' : 'color-down';
@@ -1282,7 +1348,14 @@
 
         const card = document.createElement('div');
         card.id = `holding-row-${stock.symbol}`;
-        card.className = "bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-gray-100/90 flex items-center justify-between gap-2 hover:shadow-sm transition-all";
+        card.className = `bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-gray-100/90 flex items-center justify-between gap-2 hover:shadow-sm transition-all ${
+          historicalMode ? 'hover:border-blue-400 active:scale-[0.99] cursor-pointer' : ''
+        }`;
+
+        if (historicalMode) {
+          card.onclick = () => openHistoricalPriceModal(stock.symbol, stock.currentPrice);
+        }
+
         card.innerHTML = `
           <div class="flex items-center gap-3 min-w-0">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50/70 border border-blue-100/60 text-blue-600 flex items-center justify-center text-lg sm:text-xl font-black shadow-xs shrink-0">
@@ -1292,12 +1365,13 @@
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="font-bold text-gray-900 text-sm sm:text-base leading-tight truncate">${stock.name}</span>
                 <span class="text-[10px] sm:text-[11px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded whitespace-nowrap">${stock.symbol}</span>
+                ${historicalMode ? `<span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i class="ph ph-pencil-simple"></i> 종가 수정</span>` : ''}
               </div>
               <p class="text-xs text-gray-400 mt-1 font-medium whitespace-nowrap">
                 ${stock.shares.toLocaleString()}주 · 평단 $${stock.avgPrice.toFixed(2)}
               </p>
               <p class="text-xs text-gray-500 font-semibold mt-0.5 whitespace-nowrap">
-                ${isAsOfMode() ? '기준가' : '현재가'} <span class="font-bold text-gray-800">$${stock.currentPrice.toFixed(2)}</span>
+                ${historicalMode ? '기준일 종가' : '현재가'} <span class="font-bold text-gray-800">$${stock.currentPrice.toFixed(2)}</span>
               </p>
             </div>
           </div>
@@ -1323,8 +1397,35 @@
       });
     }
 
+    function openHistoricalPriceModal(symbol, currentVal) {
+      const dateStr = formatDateKey(getEffectiveCutoffDate());
+      document.getElementById('historicalModalSymbol').textContent = symbol;
+      document.getElementById('historicalModalDate').textContent = `기준 날짜: ${dateStr}`;
+      document.getElementById('historicalModalSymbolInput').value = symbol;
+      document.getElementById('historicalModalDateInput').value = dateStr;
+      document.getElementById('inputHistoricalPrice').value = currentVal.toFixed(2);
+      document.getElementById('historicalPriceModal').classList.remove('hidden');
+    }
+
+    function handleHistoricalPriceSubmit(e) {
+      e.preventDefault();
+      const symbol = document.getElementById('historicalModalSymbolInput').value;
+      const dateStr = document.getElementById('historicalModalDateInput').value;
+      const price = parseFloat(document.getElementById('inputHistoricalPrice').value);
+
+      if (!historicalPriceCache[symbol]) {
+        historicalPriceCache[symbol] = {};
+      }
+      historicalPriceCache[symbol][dateStr] = price;
+      localStorage.setItem(STORAGE_KEY_HISTORICAL_CACHE, JSON.stringify(historicalPriceCache));
+
+      closeModal('historicalPriceModal');
+      renderAll();
+      updateTrendChart();
+    }
+
     // ===================================================
-    // 9. 일별 종가 및 자산 추이 차트 엔진 (오늘 시세 우선 보정 적용)
+    // 9. 일별 종가 및 자산/원금 추이 차트 엔진 (원금 실선 적용)
     // ===================================================
     let selectedPeriodKey = '1M';
 
@@ -1335,7 +1436,6 @@
       return `${y}-${m}-${d}`;
     }
 
-    // 외부 Fetch 타임아웃 헬퍼
     async function fetchWithTimeout(resource, options = {}) {
       const { timeout = 3500 } = options;
       const controller = new AbortController();
@@ -1375,7 +1475,6 @@
 
       let fetched = false;
 
-      // 1. Finnhub API 우선 수신
       if (finnhubKey && !finnhubKey.startsWith('sandbox_')) {
         try {
           const fhUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${sym}&resolution=D&from=${fromTime}&to=${toTime}&token=${finnhubKey}`;
@@ -1396,7 +1495,6 @@
         } catch (e) {}
       }
 
-      // 2. Yahoo Finance 보조 수신 (CORS 프록시)
       if (!fetched) {
         try {
           const yahooTarget = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?range=6mo&interval=1d`;
@@ -1449,7 +1547,6 @@
       const key = formatDateKey(targetDate);
       const todayKey = formatDateKey(new Date());
 
-      // 🔥 오늘 날짜인 경우, 캐시/과거 체결가보다 웹소켓 및 최근 수신 실시간가를 최우선 반영
       if (key === todayKey && quotePrices[symbol] !== undefined) {
         return quotePrices[symbol];
       }
@@ -1514,6 +1611,7 @@
       const labels = [];
       const dates = [];
       const valuesUsd = [];
+      const costUsd = [];
 
       const processedDays = new Set();
       const cur = new Date(startDate.getTime());
@@ -1533,26 +1631,43 @@
           dates.push(`${cur.getFullYear()}.${m}.${d}`);
 
           let dayCashUsd = 0;
+          let netDepositUsd = 0;
           cashTransactions.forEach(c => {
             if (new Date(c.date).getTime() <= endOfDayTime) {
-              if (c.type === 'DEPOSIT') dayCashUsd += Number(c.amount);
-              else if (c.type === 'WITHDRAW') dayCashUsd -= Number(c.amount);
+              if (c.type === 'DEPOSIT') {
+                dayCashUsd += Number(c.amount);
+                netDepositUsd += Number(c.amount);
+              } else if (c.type === 'WITHDRAW') {
+                dayCashUsd -= Number(c.amount);
+                netDepositUsd -= Number(c.amount);
+              }
             }
           });
 
           const stockSharesMap = {};
+          const buyFeeMap = {};
+
           trades.forEach(t => {
             if (new Date(t.date).getTime() <= endOfDayTime) {
               const sym = t.symbol.toUpperCase();
               if (!stockSharesMap[sym]) stockSharesMap[sym] = 0;
+              if (!buyFeeMap[sym]) buyFeeMap[sym] = 0;
+
               const gross = Number(t.shares) * Number(t.price);
 
               if (t.type === 'BUY') {
                 stockSharesMap[sym] += Number(t.shares);
                 const bFee = calcTossBuyFee(gross);
+                buyFeeMap[sym] += bFee;
                 dayCashUsd -= (gross + bFee);
               } else if (t.type === 'SELL') {
-                stockSharesMap[sym] = Math.max(0, stockSharesMap[sym] - Number(t.shares));
+                const prevShares = stockSharesMap[sym];
+                const sellShares = Number(t.shares);
+                if (prevShares > 0) {
+                  const ratio = Math.max(0, prevShares - sellShares) / prevShares;
+                  buyFeeMap[sym] *= ratio;
+                  stockSharesMap[sym] = Math.max(0, prevShares - sellShares);
+                }
                 const sFee = calcTossSellFee(gross);
                 dayCashUsd += (gross - sFee);
               }
@@ -1565,19 +1680,23 @@
             if (shares > 0.00001) {
               const closePrice = getStockCloseOnDate(sym, cur);
               const rawVal = shares * closePrice;
-              const sellFee = calcTossSellFee(rawVal);
-              dayStockEvalUsd += Math.max(0, rawVal - sellFee);
+              let totalImmediateFees = 0;
+              if (applyHoldingFee) {
+                totalImmediateFees = (buyFeeMap[sym] || 0) + calcTossSellFee(rawVal);
+              }
+              dayStockEvalUsd += Math.max(0, rawVal - totalImmediateFees);
             }
           });
 
           valuesUsd.push(dayStockEvalUsd + dayCashUsd);
+          costUsd.push(netDepositUsd);
         }
 
         cur.setDate(cur.getDate() + 1);
         cur.setHours(0, 0, 0, 0);
       }
 
-      return { labels, dates, valuesUsd };
+      return { labels, dates, valuesUsd, costUsd };
     }
 
     function initTrendChart() {
@@ -1597,20 +1716,35 @@
         type: 'line',
         data: {
           labels: dataPack.labels,
-          datasets: [{
-            data: dataPack.valuesUsd,
-            dates: dataPack.dates,
-            borderColor: '#f04452',
-            borderWidth: 2.8,
-            pointRadius: 0,
-            pointHoverRadius: 6,
-            pointHoverBackgroundColor: '#f04452',
-            pointHoverBorderColor: '#ffffff',
-            pointHoverBorderWidth: 2.5,
-            fill: true,
-            backgroundColor: gradient,
-            tension: 0.25,
-          }]
+          datasets: [
+            {
+              label: '합산 자산',
+              data: dataPack.valuesUsd,
+              dates: dataPack.dates,
+              borderColor: '#f04452',
+              borderWidth: 2.8,
+              pointRadius: 0,
+              pointHoverRadius: 6,
+              pointHoverBackgroundColor: '#f04452',
+              pointHoverBorderColor: '#ffffff',
+              pointHoverBorderWidth: 2.5,
+              fill: true,
+              backgroundColor: gradient,
+              tension: 0.25,
+            },
+            {
+              label: '원금 (누적 순입금액)',
+              data: dataPack.costUsd,
+              borderColor: '#9ca3af',
+              borderWidth: 2,
+              borderDash: [],
+              pointRadius: 0,
+              pointHoverRadius: 4,
+              pointHoverBackgroundColor: '#9ca3af',
+              fill: false,
+              tension: 0.1,
+            }
+          ]
         },
         options: {
           responsive: true,
@@ -1636,9 +1770,11 @@
                   const index = tooltipModel.dataPoints[0].dataIndex;
                   const label = context.chart.data.labels[index];
                   const rawUsd = context.chart.data.datasets[0].data[index];
+                  const rawCostUsd = context.chart.data.datasets[1].data[index];
 
                   document.getElementById('tooltipDate').textContent = label;
                   document.getElementById('tooltipValue').textContent = formatMoney(rawUsd);
+                  document.getElementById('tooltipCost').textContent = `원금: ${formatMoney(rawCostUsd)}`;
                 }
 
                 tooltipEl.classList.remove('hidden');
@@ -1664,6 +1800,7 @@
       trendChart.data.labels = dataPack.labels;
       trendChart.data.datasets[0].data = dataPack.valuesUsd;
       trendChart.data.datasets[0].dates = dataPack.dates;
+      trendChart.data.datasets[1].data = dataPack.costUsd;
       trendChart.update();
     }
 
@@ -1796,7 +1933,7 @@
 
       if (filteredTrades.length === 0) {
         tradeList.innerHTML = `
-          <div class="col-span-full bg-white rounded-2xl p-6 text-center text-xs text-gray-400">
+          <div class="col-span-full bg-[#191f28]/5 rounded-2xl p-6 text-center text-xs text-gray-400">
             ${historySearchKeyword ? `'${historySearchKeyword}' 검색 결과와 일치하는 거래 내역이 없습니다.` : '등록된 매매 내역이 없습니다.'}
           </div>
         `;
